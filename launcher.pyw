@@ -1,5 +1,6 @@
 """
-ARDA LAUNCHER v8.3 ZERO-BUG EDITION
+ARDA LAUNCHER v8.4 ZERO-BUG EDITION
+Installer .bat Export + GitHub Publisher (launcher + version.json + installer.bat)
 Scroll Koruması + In-place Hero Carousel + Self Auto-Updater + Developer Push
 """
 
@@ -24,9 +25,13 @@ except ImportError: PY7ZR_OK = False
 # ======================================================================
 # SÜRÜM + OTOMATİK GÜNCELLEME SABİTLERİ
 # ======================================================================
-APP_VERSION = "8.3"
+APP_VERSION = "8.4"
 UPDATE_VERSION_URL = "https://raw.githubusercontent.com/ardafatih707-coder/Game-Launcher/main/version.json"
 UPDATE_CODE_URL = "https://raw.githubusercontent.com/ardafatih707-coder/Game-Launcher/main/launcher.pyw"
+
+DEFAULT_GH_OWNER = "ardafatih707-coder"
+DEFAULT_GH_REPO  = "Game-Launcher"
+DEFAULT_GH_BRANCH = "main"
 
 # ======================================================================
 # DİZİN YÖNETİMİ
@@ -141,6 +146,142 @@ HEADERS = {
 }
 
 # ======================================================================
+# İNGİLİZCE TAM OTOMATİK KURULUM .BAT ÜRETİCİSİ
+# ======================================================================
+def generate_installer_bat(owner=DEFAULT_GH_OWNER, repo=DEFAULT_GH_REPO, branch=DEFAULT_GH_BRANCH) -> str:
+    """İngilizce tam otomatik kurulum .bat dosyası içeriğini üretir.
+    5 adım: Python kontrol/kurulum, pip paketleri, launcher indirme, başlatma, başarı mesajı."""
+    owner = (owner or DEFAULT_GH_OWNER).strip()
+    repo = (repo or DEFAULT_GH_REPO).strip()
+    branch = (branch or DEFAULT_GH_BRANCH).strip()
+    raw_url = f"https://raw.githubusercontent.com/{owner}/{repo}/{branch}/launcher.pyw"
+
+    # Batch içindeki { ve } karakterleri f-string'de {{ }} olarak escape edilir.
+    # PowerShell try/catch için {{ }} kullanılıyor.
+    bat = (
+        "@echo off\n"
+        "setlocal EnableDelayedExpansion\n"
+        "title ARDA LAUNCHER - Auto Installer\n"
+        "color 0B\n"
+        "\n"
+        "echo.\n"
+        "echo  ============================================================\n"
+        "echo     ARDA LAUNCHER - Automatic Installer\n"
+        "echo  ============================================================\n"
+        "echo.\n"
+        "\n"
+        "REM ---- STEP 1: Check / Install Python ----\n"
+        "echo  [Step 1/5] Checking for Python...\n"
+        "python --version >nul 2>&1\n"
+        "if %errorlevel% equ 0 (\n"
+        "    echo  [OK] Python is already installed.\n"
+        "    goto :STEP2\n"
+        ")\n"
+        "\n"
+        "echo  [INFO] Python not found. Attempting to install via winget...\n"
+        "where winget >nul 2>&1\n"
+        "if %errorlevel% neq 0 (\n"
+        "    echo.\n"
+        "    echo  [ERROR] winget is not available on this system.\n"
+        "    echo  Please install Python manually from:\n"
+        "    echo    https://www.python.org/downloads/\n"
+        "    echo  Make sure to check 'Add Python to PATH' during installation.\n"
+        "    echo.\n"
+        "    pause\n"
+        "    exit /b 1\n"
+        ")\n"
+        "\n"
+        "winget install -e --id Python.Python.3.12 --silent --accept-package-agreements --accept-source-agreements\n"
+        "if %errorlevel% neq 0 (\n"
+        "    echo  [ERROR] Failed to install Python automatically.\n"
+        "    echo  Please install manually: https://www.python.org/downloads/\n"
+        "    pause\n"
+        "    exit /b 1\n"
+        ")\n"
+        "\n"
+        "echo  [INFO] Refreshing PATH...\n"
+        "set \"PATH=%LOCALAPPDATA%\\Programs\\Python\\Python312;%LOCALAPPDATA%\\Programs\\Python\\Python312\\Scripts;%ProgramFiles%\\Python312;%ProgramFiles%\\Python312\\Scripts;%PATH%\"\n"
+        "\n"
+        ":STEP2\n"
+        "REM ---- STEP 2: Install dependencies ----\n"
+        "echo.\n"
+        "echo  [Step 2/5] Installing required libraries...\n"
+        "python -m pip install --upgrade pip >nul 2>&1\n"
+        "python -m pip install --upgrade customtkinter requests pillow psutil py7zr\n"
+        "if %errorlevel% neq 0 (\n"
+        "    echo  [WARN] Some libraries may have failed to install. Continuing...\n"
+        ")\n"
+        "echo  [OK] Dependencies installed.\n"
+        "\n"
+        ":STEP3\n"
+        "REM ---- STEP 3: Download latest launcher ----\n"
+        "echo.\n"
+        "echo  [Step 3/5] Downloading latest ARDA LAUNCHER...\n"
+        "set \"INSTALL_DIR=%LOCALAPPDATA%\\ArdaLauncher\"\n"
+        "if not exist \"%INSTALL_DIR%\" mkdir \"%INSTALL_DIR%\"\n"
+        "\n"
+        f"set \"LAUNCHER_URL={raw_url}\"\n"
+        "echo  [INFO] Downloading from: %LAUNCHER_URL%\n"
+        "powershell -NoProfile -Command \"try {{ Invoke-WebRequest -Uri '%LAUNCHER_URL%' -OutFile '%INSTALL_DIR%\\launcher.pyw' -UseBasicParsing; exit 0 }} catch {{ exit 1 }}\"\n"
+        "if %errorlevel% neq 0 (\n"
+        "    echo  [ERROR] Failed to download launcher.pyw\n"
+        "    echo  Check your internet connection and try again.\n"
+        "    pause\n"
+        "    exit /b 1\n"
+        ")\n"
+        "\n"
+        "if not exist \"%INSTALL_DIR%\\launcher.pyw\" (\n"
+        "    echo  [ERROR] launcher.pyw was not saved properly.\n"
+        "    pause\n"
+        "    exit /b 1\n"
+        ")\n"
+        "echo  [OK] Latest launcher downloaded.\n"
+        "\n"
+        ":STEP4\n"
+        "REM ---- STEP 4: Launch (consoleless) ----\n"
+        "echo.\n"
+        "echo  [Step 4/5] Launching ARDA LAUNCHER...\n"
+        "set \"PYTHONW=\"\n"
+        "where pythonw >nul 2>&1\n"
+        "if %errorlevel% equ 0 (\n"
+        "    set \"PYTHONW=pythonw\"\n"
+        ") else (\n"
+        "    if exist \"%LOCALAPPDATA%\\Programs\\Python\\Python312\\pythonw.exe\" (\n"
+        "        set \"PYTHONW=%LOCALAPPDATA%\\Programs\\Python\\Python312\\pythonw.exe\"\n"
+        "    ) else if exist \"%ProgramFiles%\\Python312\\pythonw.exe\" (\n"
+        "        set \"PYTHONW=%ProgramFiles%\\Python312\\pythonw.exe\"\n"
+        "    ) else (\n"
+        "        set \"PYTHONW=python\"\n"
+        "    )\n"
+        ")\n"
+        "\n"
+        "if \"%PYTHONW%\"==\"pythonw\" (\n"
+        "    start \"\" pythonw \"%INSTALL_DIR%\\launcher.pyw\"\n"
+        ") else (\n"
+        "    start \"\" \"%PYTHONW%\" \"%INSTALL_DIR%\\launcher.pyw\"\n"
+        ")\n"
+        "echo  [OK] ARDA LAUNCHER launched. A desktop shortcut will be created automatically.\n"
+        "\n"
+        ":STEP5\n"
+        "REM ---- STEP 5: Success ----\n"
+        "echo.\n"
+        "echo  ============================================================\n"
+        "echo     SUCCESS!\n"
+        "echo  ============================================================\n"
+        "echo.\n"
+        "echo   ARDA LAUNCHER has been successfully installed and launched!\n"
+        "echo.\n"
+        "echo   Install location: %INSTALL_DIR%\n"
+        "echo   A desktop shortcut will be created automatically.\n"
+        "echo.\n"
+        "echo   You can close this window now.\n"
+        "echo.\n"
+        "pause\n"
+        "exit /b 0\n"
+    )
+    return bat
+
+# ======================================================================
 # OTOMATİK GÜNCELLEME MOTORU
 # ======================================================================
 class AutoUpdater:
@@ -184,7 +325,7 @@ class AutoUpdater:
         except Exception: return None
 
 # ======================================================================
-# GITHUB PUBLISHER
+# GITHUB PUBLISHER (launcher.pyw + version.json + ArdaLauncher_Installer.bat)
 # ======================================================================
 class GitHubPublisher:
     def __init__(self, token, owner, repo, branch="main"):
@@ -196,7 +337,7 @@ class GitHubPublisher:
         self.headers = {
             "Authorization": f"token {self.token}",
             "Accept": "application/vnd.github+json",
-            "User-Agent": "ArdaLauncher-Publisher/8.3",
+            "User-Agent": "ArdaLauncher-Publisher/8.4",
             "X-GitHub-Api-Version": "2022-11-28",
         }
 
@@ -241,33 +382,53 @@ class GitHubPublisher:
                 content = f.read()
         except Exception as e:
             return {"ok": False, "error": f"Dosya okunamadı: {e}"}
-        if progress_cb: progress_cb("Dosya içeriği hazırlanıyor...", 10)
+        if progress_cb: progress_cb("Preparing launcher.pyw...", 10)
         patched = self.patch_content(content, new_version, self.owner, self.repo, self.branch)
-        if progress_cb: progress_cb("launcher.pyw yükleniyor...", 30)
+        if progress_cb: progress_cb("Uploading launcher.pyw...", 30)
         res1 = self._put_file("launcher.pyw", patched,
-                             f"ARDA LAUNCHER v{new_version} — kod güncellemesi")
+                             f"ARDA LAUNCHER v{new_version} — code update")
         if not res1.get("ok"):
             return {"ok": False, "step": "launcher.pyw",
-                    "error": res1.get("error", "Bilinmeyen hata"),
+                    "error": res1.get("error", "Unknown error"),
                     "status": res1.get("status")}
-        if progress_cb: progress_cb("launcher.pyw yüklendi ✓", 60)
+        if progress_cb: progress_cb("launcher.pyw uploaded ✓", 50)
+
         ver_data = {
             "version": new_version,
             "notes": notes.strip() or f"ARDA LAUNCHER v{new_version}",
             "url": f"https://raw.githubusercontent.com/{self.owner}/{self.repo}/{self.branch}/launcher.pyw",
+            "installer_url": f"https://raw.githubusercontent.com/{self.owner}/{self.repo}/{self.branch}/ArdaLauncher_Installer.bat",
             "released": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         }
         ver_bytes = json.dumps(ver_data, indent=2, ensure_ascii=False).encode("utf-8")
-        if progress_cb: progress_cb("version.json yükleniyor...", 80)
+        if progress_cb: progress_cb("Uploading version.json...", 65)
         res2 = self._put_file("version.json", ver_bytes,
                              f"ARDA LAUNCHER v{new_version} — version.json")
         if not res2.get("ok"):
             return {"ok": False, "step": "version.json",
-                    "error": res2.get("error", "Bilinmeyen hata"),
+                    "error": res2.get("error", "Unknown error"),
                     "status": res2.get("status")}
-        if progress_cb: progress_cb("Tüm dosyalar yüklendi ✓", 100)
+        if progress_cb: progress_cb("version.json uploaded ✓", 80)
+
+        # --- YENİ: ArdaLauncher_Installer.bat üret ve yükle ---
+        try:
+            bat_str = generate_installer_bat(self.owner, self.repo, self.branch)
+            bat_bytes = bat_str.encode("utf-8")
+            if progress_cb: progress_cb("Uploading ArdaLauncher_Installer.bat...", 90)
+            res3 = self._put_file("ArdaLauncher_Installer.bat", bat_bytes,
+                                 f"ARDA LAUNCHER v{new_version} — installer.bat")
+            if not res3.get("ok"):
+                return {"ok": False, "step": "ArdaLauncher_Installer.bat",
+                        "error": res3.get("error", "Unknown error"),
+                        "status": res3.get("status")}
+        except Exception as e:
+            return {"ok": False, "step": "installer.bat (generate)",
+                    "error": str(e), "status": "-"}
+
+        if progress_cb: progress_cb("All files uploaded ✓", 100)
         return {"ok": True, "version_url": ver_data["url"],
                 "code_url": ver_data["url"].replace("version.json","launcher.pyw"),
+                "installer_url": ver_data["installer_url"],
                 "data": ver_data}
 
 # ======================================================================
@@ -991,7 +1152,6 @@ class ArdaLauncher(ctk.CTk):
         self.image_refs = {}
         self._updating = False
         self._dev_visible = False
-        # --- SCROLL + HERO FIX DEĞİŞKENLERİ ---
         self._scroll_positions = {}
         self._hero_paused = False
         self.hero_frame = None
@@ -1001,7 +1161,6 @@ class ArdaLauncher(ctk.CTk):
         self.hero_incele_btn = None
         self.hero_dots = None
         self.hero_ids = []
-        # ---
         self._pencere_ikonu_uygula()
 
         self.veri = load_json(DATA_DOSYASI, {})
@@ -1017,7 +1176,8 @@ class ArdaLauncher(ctk.CTk):
         self.veri.setdefault("desktop_shortcut_created", False)
         self.veri.setdefault("gunluk_oynama", {})
         self.veri.setdefault("koleksiyonlar", {})
-        self.veri.setdefault("dev", {"owner": "", "repo": "", "token": "", "branch": "main",
+        self.veri.setdefault("dev", {"owner": DEFAULT_GH_OWNER, "repo": DEFAULT_GH_REPO,
+                                     "token": "", "branch": DEFAULT_GH_BRANCH,
                                      "next_version": "", "notes": ""})
         self.veri.setdefault("settings", {
             "download_speed_limit": 0, "auto_extract": True,
@@ -1083,8 +1243,6 @@ class ArdaLauncher(ctk.CTk):
                                  text_color=RENKLER["metin"], font=ctk.CTkFont(size=12))
             tb.pack(fill="both", expand=True, padx=20, pady=(0, 10))
             tb.insert("1.0", notes); tb.configure(state="disabled")
-            self._upd_progress = ctk.CTkProgressBar(win, height=10, progress_color=RENKLER["vurgu"])
-            self._upd_progress.pack(fill="x", padx=20, pady=(0, 5)); self._upd_progress.set(0)
             bf = ctk.CTkFrame(win, fg_color="transparent"); bf.pack(pady=(0, 20))
             def do_update():
                 win.destroy()
@@ -1374,42 +1532,29 @@ class ArdaLauncher(ctk.CTk):
             except Exception: pass
             self._monitor_job = self.after(refresh, self._sistem_monitor)
 
-    # ================================================================
-    # HERO CAROUSEL — SCROLL FIX: SADECE HERO İÇERİĞİNİ GÜNCELLER
-    # ================================================================
+    # ============ HERO CAROUSEL — SCROLL FIX ============
     def _auto_slider(self):
-        """Her 6 saniyede hero'yu ilerlet. Sayfa yeniden çizilmez."""
         try:
             if (self.aktif_sayfa == "kesfet" and not self.arama
                     and not self._hero_paused
                     and getattr(self, "hero_ids", None)):
                 self._hero_index += 1
                 self._hero_guncelle()
-        except Exception:
-            pass
+        except Exception: pass
         self.after(6000, self._auto_slider)
 
     def _hero_prev(self):
-        """Önceki slayda geç - sadece hero içeriğini günceller."""
         if not getattr(self, "hero_ids", None): return
-        self._hero_index -= 1
-        self._hero_guncelle()
+        self._hero_index -= 1; self._hero_guncelle()
 
     def _hero_next(self):
-        """Sonraki slayda geç - sadece hero içeriğini günceller."""
         if not getattr(self, "hero_ids", None): return
-        self._hero_index += 1
-        self._hero_guncelle()
+        self._hero_index += 1; self._hero_guncelle()
 
-    def _hero_pause(self, event=None):
-        self._hero_paused = True
-
-    def _hero_resume(self, event=None):
-        self._hero_paused = False
+    def _hero_pause(self, event=None): self._hero_paused = True
+    def _hero_resume(self, event=None): self._hero_paused = False
 
     def _hero_guncelle(self):
-        """Hero banner içindeki görsel, başlık, açıklama, buton, noktaları günceller.
-        Tüm sayfayı yeniden çizmez → scroll konumu korunur."""
         try:
             if not self.hero_ids: return
             self._hero_index %= len(self.hero_ids)
@@ -1435,8 +1580,7 @@ class ArdaLauncher(ctk.CTk):
                     c = RENKLER["vurgu"] if i == self._hero_index else RENKLER["soluk"]
                     ctk.CTkLabel(self.hero_dots, text="●", font=ctk.CTkFont(size=12),
                                  text_color=c).pack(side="left", padx=3)
-        except Exception as e:
-            print(f"[HERO] {e}")
+        except Exception as e: print(f"[HERO] {e}")
 
     def _arama_degisti(self, _=None):
         self.arama = self.arama_entry.get().strip().lower()
@@ -1459,42 +1603,28 @@ class ArdaLauncher(ctk.CTk):
         k = self.oyunlar_dizini / oid
         return k.exists() and any(k.rglob(exe))
 
-    # ================================================================
-    # SCROLL KONUMU KORUMALI SAYFA DEĞİŞTİRME
-    # ================================================================
+    # ============ SCROLL KONUMU KORUMALI SAYFA DEĞİŞTİRME ============
     def _scroll_kaydet(self, sayfa):
-        """Mevcut sayfanın dikey kaydırma konumunu kaydet (0.0 - 1.0)."""
         try:
             pos = self.icerik._parent_canvas.yview()[0]
             self._scroll_positions[sayfa] = float(pos)
-        except Exception:
-            pass
+        except Exception: pass
 
     def _scroll_geri_yukle(self, pos):
-        """Kaydedilmiş kaydırma konumunu geri yükle."""
         try:
             if pos and pos > 0.001:
                 self.icerik._parent_canvas.yview_moveto(pos)
-        except Exception:
-            pass
+        except Exception: pass
 
     def sayfa_degistir(self, s):
-        # Hero referanslarını temizle (sayfa değişiyor)
-        self.hero_frame = None
-        self.hero_banner = None
-        self.hero_title_lbl = None
-        self.hero_desc_lbl = None
-        self.hero_incele_btn = None
-        self.hero_dots = None
+        self.hero_frame = None; self.hero_banner = None
+        self.hero_title_lbl = None; self.hero_desc_lbl = None
+        self.hero_incele_btn = None; self.hero_dots = None
         self.hero_ids = []
-
-        # Mevcut scroll pozisyonunu kaydet
         try:
             if self.aktif_sayfa:
                 self._scroll_kaydet(self.aktif_sayfa)
-        except Exception:
-            pass
-
+        except Exception: pass
         self.aktif_sayfa = s
         for k, b in self.nav_btn.items():
             b.configure(fg_color=RENKLER["vurgu"] if k == s else "transparent",
@@ -1502,15 +1632,10 @@ class ArdaLauncher(ctk.CTk):
         for w in self.icerik.winfo_children(): w.destroy()
         {"kesfet": self._kesfet, "kutuphanem": self._kutuphanem, "indirmeler": self._indirmeler,
          "profil": self._profil, "ayarlar": self._ayarlar}.get(s, lambda: None)()
-
-        # Hedef sayfanın kaydedilmiş scroll konumunu geri yükle
         saved = self._scroll_positions.get(s, 0.0)
         if saved and saved > 0.001:
             self.after(50, lambda p=saved: self._scroll_geri_yukle(p))
 
-    # ================================================================
-    # KEŞFET — Hero'yu sınıf özelliği olarak sakla
-    # ================================================================
     def _kesfet(self):
         one = ["mindustry","openttd","warzone2100","zeroad","veloren","supertuxkart"]
         one = [x for x in one if x in self.oyunlar]
@@ -1525,14 +1650,12 @@ class ArdaLauncher(ctk.CTk):
             hero.grid_propagate(False); hero.grid_rowconfigure(0, weight=1)
             hero.grid_columnconfigure(0, weight=1)
             self.hero_frame = hero
-
             banner = ctk.CTkLabel(hero, text="")
             banner.grid(row=0, column=0, sticky="nsew")
             self.hero_banner = banner
             self.gorsel_yukle_guvenli(banner, aktif_id, "banner",
                 onerilen.get("banner_urls", onerilen.get("kapak_urls", [])),
                 (1080, 280), onerilen["isim"], onerilen["tur"], overlay=True)
-
             info = ctk.CTkFrame(hero, fg_color=RENKLER["yan"], corner_radius=10)
             info.place(x=25, y=165)
             title_lbl = ctk.CTkLabel(info, text=onerilen["isim"],
@@ -1540,45 +1663,36 @@ class ArdaLauncher(ctk.CTk):
                                       text_color="white")
             title_lbl.pack(anchor="w", padx=15, pady=(10, 2))
             self.hero_title_lbl = title_lbl
-
             desc_lbl = ctk.CTkLabel(info, text=onerilen["aciklama"][:90] + "...",
                                      font=ctk.CTkFont(size=11), text_color=RENKLER["soluk"],
                                      wraplength=500, justify="left")
             desc_lbl.pack(anchor="w", padx=15, pady=(0, 8))
             self.hero_desc_lbl = desc_lbl
-
             incele_btn = ctk.CTkButton(info, text="İncele", width=110, height=30,
                                         fg_color=RENKLER["vurgu"], hover_color=RENKLER["vurgu_hover"],
                                         command=lambda oid=aktif_id: self.oyun_detay_goster(oid))
             incele_btn.pack(anchor="w", padx=15, pady=(0, 10))
             self.hero_incele_btn = incele_btn
-
             ctk.CTkButton(hero, text="◀", width=36, height=36, font=ctk.CTkFont(size=16),
                           fg_color=RENKLER["yan"], hover_color=RENKLER["vurgu_hover"],
                           command=self._hero_prev).place(relx=0.0, rely=0.5, x=15, anchor="w")
             ctk.CTkButton(hero, text="▶", width=36, height=36, font=ctk.CTkFont(size=16),
                           fg_color=RENKLER["yan"], hover_color=RENKLER["vurgu_hover"],
                           command=self._hero_next).place(relx=1.0, rely=0.5, x=-15, anchor="e")
-
             dots = ctk.CTkFrame(hero, fg_color="transparent")
             dots.place(relx=0.5, rely=1.0, y=-15, anchor="s")
             self.hero_dots = dots
             for i in range(len(one)):
                 c = RENKLER["vurgu"] if i == self._hero_index else RENKLER["soluk"]
                 ctk.CTkLabel(dots, text="●", font=ctk.CTkFont(size=12), text_color=c).pack(side="left", padx=3)
-
             self.hero_ids = list(one)
-
-            # --- FARE HERO ÜZERİNDEYKEN OTOMATİK GEÇİŞİ DURDUR ---
             hero.bind("<Enter>", self._hero_pause, add="+")
             hero.bind("<Leave>", self._hero_resume, add="+")
             for w in (banner, title_lbl, desc_lbl, incele_btn, dots):
                 try:
                     w.bind("<Enter>", self._hero_pause, add="+")
                     w.bind("<Leave>", self._hero_resume, add="+")
-                except Exception:
-                    pass
-
+                except Exception: pass
         filtreli = [(oid, o) for oid, o in self.oyunlar.items() if self._filtrele(oid, o)]
         if not filtreli:
             ctk.CTkLabel(self.icerik, text="Eşleşen oyun bulunamadı.",
@@ -1925,6 +2039,36 @@ class ArdaLauncher(ctk.CTk):
             save_json(DATA_DOSYASI, self.veri)
             self.sayfa_degistir("ayarlar")
 
+    # ============ YENİ: İNGİLİZCE INSTALLER .BAT DIŞA AKTAR ============
+    def _export_installer_bat(self):
+        """Kullanıcının seçtiği konuma İngilizce tam otomatik kurulum .bat dosyası kaydeder."""
+        try:
+            d = self.veri.get("dev", {})
+            owner = (d.get("owner") or DEFAULT_GH_OWNER).strip()
+            repo = (d.get("repo") or DEFAULT_GH_REPO).strip()
+            branch = (d.get("branch") or DEFAULT_GH_BRANCH).strip()
+            bat_content = generate_installer_bat(owner, repo, branch)
+            f = filedialog.asksaveasfilename(
+                parent=self, defaultextension=".bat",
+                initialfile="ArdaLauncher_Installer.bat",
+                filetypes=[("Batch Installer", "*.bat")])
+            if not f: return
+            with open(f, "w", encoding="utf-8", newline="\r\n") as fp:
+                fp.write(bat_content)
+            self._aktivite_ekle(f"Installer .bat dışa aktarıldı: {Path(f).name}")
+            messagebox.showinfo("Başarılı",
+                f"✅ English Installer created:\n{f}\n\n"
+                f"📦 Repo: {owner}/{repo} ({branch})\n"
+                f"🔗 Download URL: https://raw.githubusercontent.com/{owner}/{repo}/{branch}/launcher.pyw\n\n"
+                "Share this .bat file with friends. When they double-click it:\n"
+                "  1. Python is auto-installed (via winget if missing)\n"
+                "  2. Required libraries are installed\n"
+                "  3. ARDA LAUNCHER is downloaded to %LOCALAPPDATA%\\ArdaLauncher\n"
+                "  4. It is launched automatically\n"
+                "  5. A desktop shortcut is created by the launcher itself")
+        except Exception as e:
+            messagebox.showerror("Hata", f"Installer oluşturulamadı:\n{e}")
+
     # ============ GELİŞTİRİCİ MODU ============
     def _dev_toggle(self):
         self._dev_visible = not self._dev_visible
@@ -1958,7 +2102,11 @@ class ArdaLauncher(ctk.CTk):
         script = _get_script_path()
         if not script:
             messagebox.showerror("Hata", "launcher.pyw yolu tespit edilemedi."); return
-        if not messagebox.askyesno("Yayınla", f"Yüklenecek:\n\n📦 {owner}/{repo}\n🌿 {branch}\n🔖 v{new_version}\n\nDevam?"):
+        if not messagebox.askyesno("Yayınla",
+            f"Yüklenecek 3 dosya:\n\n"
+            f"📦 {owner}/{repo}\n🌿 {branch}\n🔖 v{new_version}\n\n"
+            f"• launcher.pyw\n• version.json\n• ArdaLauncher_Installer.bat\n\n"
+            f"Devam?"):
             return
         self.veri["dev"] = {"owner": owner, "repo": repo, "token": token, "branch": branch,
                             "next_version": new_version, "notes": notes}
@@ -1992,9 +2140,15 @@ class ArdaLauncher(ctk.CTk):
         if res.get("ok"):
             self.dev_status_lbl.configure(text=f"✅ Yayınlandı! v{new_version}", text_color=RENKLER["yesil"])
             self.dev_progress.set(1.0)
-            messagebox.showinfo("Başarılı",
-                f"✅ v{new_version} başarıyla yayınlandı!\n\n📦 {owner}/{repo} ({branch})\n\n"
-                "Kullanıcılar bir sonraki açılışta güncelleme alacak.")
+            msg = (f"✅ v{new_version} başarıyla yayınlandı!\n\n"
+                   f"📦 {owner}/{repo} ({branch})\n\n"
+                   f"Yüklenen dosyalar:\n"
+                   f"• launcher.pyw\n• version.json\n• ArdaLauncher_Installer.bat\n\n"
+                   f"🔗 Installer (paylaşılabilir):\n"
+                   f"https://raw.githubusercontent.com/{owner}/{repo}/{branch}/ArdaLauncher_Installer.bat\n\n"
+                   f"Kullanıcılar bir sonraki açılışta otomatik güncelleme alacak.")
+            self._aktivite_ekle(f"v{new_version} yayınlandı → {owner}/{repo}")
+            messagebox.showinfo("Başarılı", msg)
         else:
             self.dev_status_lbl.configure(text=f"❌ Hata: {res.get('error','?')}", text_color=RENKLER["kirmizi"])
             messagebox.showerror("Yayın Hatası",
@@ -2019,7 +2173,7 @@ class ArdaLauncher(ctk.CTk):
                 r = requests.get(f"https://api.github.com/repos/{owner}/{repo}",
                                  headers={"Authorization": f"token {token}",
                                           "Accept": "application/vnd.github+json",
-                                          "User-Agent": "ArdaLauncher-Publisher/8.3"},
+                                          "User-Agent": "ArdaLauncher-Publisher/8.4"},
                                  timeout=10)
                 if r.status_code == 200:
                     data = r.json()
@@ -2142,7 +2296,7 @@ class ArdaLauncher(ctk.CTk):
                           hover_color=tt["hover"],
                           command=lambda a=ak: self.tema_degistir(a)).pack(side="left", padx=3)
 
-        # TAB 5
+        # TAB 5 — BAKIM + INSTALLER EXPORT + DEV MODE
         j = ctk.CTkFrame(t5, fg_color="transparent"); j.pack(fill="x", padx=10, pady=5)
         upd_frame = ctk.CTkFrame(j, fg_color=RENKLER["yan"], corner_radius=8)
         upd_frame.pack(fill="x", pady=(0, 10))
@@ -2152,6 +2306,24 @@ class ArdaLauncher(ctk.CTk):
         ctk.CTkButton(upd_frame, text="🔍 Güncellemeleri Denetle", height=36,
                       fg_color=RENKLER["vurgu"], hover_color=RENKLER["vurgu_hover"],
                       command=self._manuel_guncelleme_denetle).pack(fill="x", padx=12, pady=(0, 10))
+
+        # --- YENİ: ENGLISH INSTALLER EXPORT ---
+        inst_frame = ctk.CTkFrame(j, fg_color="#102030", corner_radius=8,
+                                   border_width=1, border_color="#2a4a6a")
+        inst_frame.pack(fill="x", pady=(0, 10))
+        ctk.CTkLabel(inst_frame, text="📦 English Installer Export",
+                     font=ctk.CTkFont(size=13, weight="bold"),
+                     text_color=RENKLER["neon_mavi"]).pack(anchor="w", padx=12, pady=(8, 4))
+        ctk.CTkLabel(inst_frame,
+                     text="Tek tıkla .bat kurulum dosyası üret — arkadaşlarına ver,\n"
+                          "Python + kütüphaneler + launcher otomatik kurulsun.",
+                     font=ctk.CTkFont(size=10), text_color=RENKLER["soluk"],
+                     justify="left", wraplength=560).pack(anchor="w", padx=12, pady=(0, 8))
+        ctk.CTkButton(inst_frame, text="📦 Export English Installer (.bat)", height=38,
+                      fg_color=RENKLER["neon_mavi"], hover_color="#00A5CC",
+                      font=ctk.CTkFont(size=12, weight="bold"),
+                      command=self._export_installer_bat).pack(fill="x", padx=12, pady=(0, 10))
+
         ctk.CTkButton(j, text="🖥️ Masaüstü Kısayolu Oluştur", height=36,
                       fg_color=RENKLER["vurgu"], hover_color=RENKLER["vurgu_hover"],
                       command=lambda: self.masaustu_kisayolu_olustur(sessiz=False)).pack(fill="x", pady=4)
@@ -2182,6 +2354,9 @@ class ArdaLauncher(ctk.CTk):
         ctk.CTkLabel(self.dev_frame, text="🚀 GitHub'a Sürüm Yayınla",
                      font=ctk.CTkFont(size=14, weight="bold"),
                      text_color=RENKLER["vurgu"]).pack(anchor="w", padx=12, pady=(12, 4))
+        ctk.CTkLabel(self.dev_frame,
+                     text="Yüklenen dosyalar: launcher.pyw + version.json + ArdaLauncher_Installer.bat",
+                     font=ctk.CTkFont(size=10), text_color=RENKLER["soluk"]).pack(anchor="w", padx=12, pady=(0, 10))
         def _row(lbl, value, show=None):
             r = ctk.CTkFrame(self.dev_frame, fg_color="transparent"); r.pack(fill="x", padx=12, pady=3)
             ctk.CTkLabel(r, text=lbl, width=140, anchor="w",
@@ -2192,10 +2367,10 @@ class ArdaLauncher(ctk.CTk):
                              show=show if show else "")
             e.pack(side="left", fill="x", expand=True)
             e.insert(0, value); return e
-        self.dev_owner_entry = _row("👤 GitHub Kullanıcı:", d.get("owner", ""))
-        self.dev_repo_entry = _row("📦 Repo Adı:", d.get("repo", ""))
+        self.dev_owner_entry = _row("👤 GitHub Kullanıcı:", d.get("owner", DEFAULT_GH_OWNER))
+        self.dev_repo_entry = _row("📦 Repo Adı:", d.get("repo", DEFAULT_GH_REPO))
         self.dev_token_entry = _row("🔑 GitHub PAT:", d.get("token", ""), show="•")
-        self.dev_branch_entry = _row("🌿 Branch:", d.get("branch", "main"))
+        self.dev_branch_entry = _row("🌿 Branch:", d.get("branch", DEFAULT_GH_BRANCH))
         next_v = d.get("next_version", "") or self._dev_auto_next_version()
         self.dev_version_entry = _row("🔖 Yeni Sürüm:", next_v)
         ctk.CTkLabel(self.dev_frame, text="📝 Yayın Notları:",
@@ -2215,7 +2390,7 @@ class ArdaLauncher(ctk.CTk):
         ctk.CTkButton(btn_row, text="🔗 Bağlantı Testi", width=120, height=34,
                       fg_color=RENKLER["yan"], hover_color=RENKLER["kart_hover"],
                       command=self._dev_test_connection).pack(side="left", padx=(0, 5))
-        self.dev_publish_btn = ctk.CTkButton(btn_row, text="🚀 Bu Sürümü Yayınla", height=36,
+        self.dev_publish_btn = ctk.CTkButton(btn_row, text="🚀 Bu Sürümü Yayınla (3 Dosya)", height=36,
                                               fg_color=RENKLER["yesil"], hover_color="#16A34A",
                                               font=ctk.CTkFont(size=12, weight="bold"),
                                               command=self._dev_publish)
@@ -2345,11 +2520,8 @@ class ArdaLauncher(ctk.CTk):
     def oyun_detay_goster(self, oid):
         self.secili_oyun = oid
         oyun = self.oyunlar[oid]
-        # Scroll pozisyonunu kaydet
-        try:
-            self._scroll_kaydet(self.aktif_sayfa)
-        except Exception:
-            pass
+        try: self._scroll_kaydet(self.aktif_sayfa)
+        except Exception: pass
         for w in self.icerik.winfo_children(): w.destroy()
         ctk.CTkButton(self.icerik, text="← Geri", width=80, fg_color="transparent",
                       hover_color=RENKLER["kart_hover"],
@@ -2424,9 +2596,6 @@ class ArdaLauncher(ctk.CTk):
                           hover_color="#DC2626",
                           command=lambda: self.oyun_kaldir(oid)).grid(row=0, column=1, padx=(5,0), sticky="ew")
 
-    # ================================================================
-    # FAVORİ DEĞİŞTİR — SCROLL KORUMALI
-    # ================================================================
     def favori_degistir(self, oid, detail=False):
         v = self.veri["oyunlar"].setdefault(oid, {})
         v["favori"] = not v.get("favori", False)
@@ -2434,14 +2603,8 @@ class ArdaLauncher(ctk.CTk):
         if detail and self.secili_oyun == oid:
             self.oyun_detay_goster(oid)
         else:
-            # Mevcut scroll pozisyonunu kaydet
-            try:
-                saved_pos = self.icerik._parent_canvas.yview()[0]
-            except Exception:
-                saved_pos = 0.0
-            # Sayfayı yeniden çiz (bu sayfa_degistir içinde otomatik
-            # olarak kaydedilen konumu geri yüklemeye çalışır ama biz
-            # yine de garantiye alalım)
+            try: saved_pos = self.icerik._parent_canvas.yview()[0]
+            except Exception: saved_pos = 0.0
             self.sayfa_degistir(self.aktif_sayfa)
             if saved_pos > 0.001:
                 self.after(50, lambda p=saved_pos: self._scroll_geri_yukle(p))
