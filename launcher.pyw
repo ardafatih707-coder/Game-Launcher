@@ -1,7 +1,6 @@
 """
-ARDA LAUNCHER v8.4 ZERO-BUG EDITION
-Installer .bat Export + GitHub Publisher (launcher + version.json + installer.bat)
-Scroll Koruması + In-place Hero Carousel + Self Auto-Updater + Developer Push
+ARDA LAUNCHER v8.6 ZERO-BUG EDITION
+Flicker-free RAM+Disk cache + 24 Steam F2P + Tüm önceki özellikler
 """
 
 import os, sys, io, json, time, math, hashlib, zipfile, shutil, subprocess, threading, ctypes, tempfile, random, re, base64
@@ -25,7 +24,7 @@ except ImportError: PY7ZR_OK = False
 # ======================================================================
 # SÜRÜM + OTOMATİK GÜNCELLEME SABİTLERİ
 # ======================================================================
-APP_VERSION = "8.4"
+APP_VERSION = "8.6"
 UPDATE_VERSION_URL = "https://raw.githubusercontent.com/ardafatih707-coder/Game-Launcher/main/version.json"
 UPDATE_CODE_URL = "https://raw.githubusercontent.com/ardafatih707-coder/Game-Launcher/main/launcher.pyw"
 
@@ -146,30 +145,91 @@ HEADERS = {
 }
 
 # ======================================================================
+# STEAM YARDIMCILARI
+# ======================================================================
+def _steam_install_path():
+    if sys.platform != "win32": return None
+    candidates = []
+    try:
+        if WINREG_OK:
+            for hive, key_path in [
+                (winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\WOW6432Node\Valve\Steam"),
+                (winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Valve\Steam"),
+                (winreg.HKEY_CURRENT_USER, r"Software\Valve\Steam"),
+            ]:
+                try:
+                    key = winreg.OpenKey(hive, key_path, 0, winreg.KEY_READ)
+                    val, _ = winreg.QueryValueEx(key, "InstallPath")
+                    winreg.CloseKey(key)
+                    candidates.append(Path(val))
+                except Exception: pass
+    except Exception: pass
+    candidates.append(Path("C:/Program Files (x86)/Steam"))
+    candidates.append(Path("C:/Program Files/Steam"))
+    for c in candidates:
+        try:
+            if c.exists(): return c
+        except Exception: continue
+    return None
+
+def _steam_game_installed(appid: int) -> bool:
+    steam = _steam_install_path()
+    if not steam: return False
+    try:
+        acf = steam / "steamapps" / f"appmanifest_{appid}.acf"
+        if acf.exists(): return True
+    except Exception: pass
+    try:
+        vdf = steam / "steamapps" / "libraryfolders.vdf"
+        if vdf.exists():
+            text = vdf.read_text(encoding="utf-8", errors="ignore")
+            paths = re.findall(r'"path"\s+"([^"]+)"', text)
+            for p in paths:
+                try:
+                    acf = Path(p.replace("\\\\", "\\")) / "steamapps" / f"appmanifest_{appid}.acf"
+                    if acf.exists(): return True
+                except Exception: continue
+    except Exception: pass
+    return False
+
+def _steam_launch(appid: int):
+    try:
+        os.startfile(f"steam://rungameid/{appid}")
+        return True
+    except Exception:
+        try:
+            subprocess.Popen(["cmd", "/c", "start", "", f"steam://rungameid/{appid}"], shell=False)
+            return True
+        except Exception: return False
+
+def _steam_install(appid: int):
+    try:
+        os.startfile(f"steam://install/{appid}")
+        return True
+    except Exception:
+        try:
+            subprocess.Popen(["cmd", "/c", "start", "", f"steam://install/{appid}"], shell=False)
+            return True
+        except Exception: return False
+
+# ======================================================================
 # İNGİLİZCE TAM OTOMATİK KURULUM .BAT ÜRETİCİSİ
 # ======================================================================
 def generate_installer_bat(owner=DEFAULT_GH_OWNER, repo=DEFAULT_GH_REPO, branch=DEFAULT_GH_BRANCH) -> str:
-    """İngilizce tam otomatik kurulum .bat dosyası içeriğini üretir.
-    5 adım: Python kontrol/kurulum, pip paketleri, launcher indirme, başlatma, başarı mesajı."""
     owner = (owner or DEFAULT_GH_OWNER).strip()
     repo = (repo or DEFAULT_GH_REPO).strip()
     branch = (branch or DEFAULT_GH_BRANCH).strip()
     raw_url = f"https://raw.githubusercontent.com/{owner}/{repo}/{branch}/launcher.pyw"
-
-    # Batch içindeki { ve } karakterleri f-string'de {{ }} olarak escape edilir.
-    # PowerShell try/catch için {{ }} kullanılıyor.
     bat = (
         "@echo off\n"
         "setlocal EnableDelayedExpansion\n"
         "title ARDA LAUNCHER - Auto Installer\n"
         "color 0B\n"
-        "\n"
         "echo.\n"
         "echo  ============================================================\n"
         "echo     ARDA LAUNCHER - Automatic Installer\n"
         "echo  ============================================================\n"
         "echo.\n"
-        "\n"
         "REM ---- STEP 1: Check / Install Python ----\n"
         "echo  [Step 1/5] Checking for Python...\n"
         "python --version >nul 2>&1\n"
@@ -177,105 +237,62 @@ def generate_installer_bat(owner=DEFAULT_GH_OWNER, repo=DEFAULT_GH_REPO, branch=
         "    echo  [OK] Python is already installed.\n"
         "    goto :STEP2\n"
         ")\n"
-        "\n"
         "echo  [INFO] Python not found. Attempting to install via winget...\n"
         "where winget >nul 2>&1\n"
         "if %errorlevel% neq 0 (\n"
-        "    echo.\n"
-        "    echo  [ERROR] winget is not available on this system.\n"
-        "    echo  Please install Python manually from:\n"
+        "    echo  [ERROR] winget is not available. Install Python manually:\n"
         "    echo    https://www.python.org/downloads/\n"
-        "    echo  Make sure to check 'Add Python to PATH' during installation.\n"
-        "    echo.\n"
         "    pause\n"
         "    exit /b 1\n"
         ")\n"
-        "\n"
         "winget install -e --id Python.Python.3.12 --silent --accept-package-agreements --accept-source-agreements\n"
         "if %errorlevel% neq 0 (\n"
-        "    echo  [ERROR] Failed to install Python automatically.\n"
-        "    echo  Please install manually: https://www.python.org/downloads/\n"
+        "    echo  [ERROR] Failed to install Python.\n"
         "    pause\n"
         "    exit /b 1\n"
         ")\n"
-        "\n"
-        "echo  [INFO] Refreshing PATH...\n"
         "set \"PATH=%LOCALAPPDATA%\\Programs\\Python\\Python312;%LOCALAPPDATA%\\Programs\\Python\\Python312\\Scripts;%ProgramFiles%\\Python312;%ProgramFiles%\\Python312\\Scripts;%PATH%\"\n"
-        "\n"
         ":STEP2\n"
-        "REM ---- STEP 2: Install dependencies ----\n"
         "echo.\n"
         "echo  [Step 2/5] Installing required libraries...\n"
         "python -m pip install --upgrade pip >nul 2>&1\n"
         "python -m pip install --upgrade customtkinter requests pillow psutil py7zr\n"
-        "if %errorlevel% neq 0 (\n"
-        "    echo  [WARN] Some libraries may have failed to install. Continuing...\n"
-        ")\n"
         "echo  [OK] Dependencies installed.\n"
-        "\n"
         ":STEP3\n"
-        "REM ---- STEP 3: Download latest launcher ----\n"
         "echo.\n"
         "echo  [Step 3/5] Downloading latest ARDA LAUNCHER...\n"
         "set \"INSTALL_DIR=%LOCALAPPDATA%\\ArdaLauncher\"\n"
         "if not exist \"%INSTALL_DIR%\" mkdir \"%INSTALL_DIR%\"\n"
-        "\n"
         f"set \"LAUNCHER_URL={raw_url}\"\n"
         "echo  [INFO] Downloading from: %LAUNCHER_URL%\n"
         "powershell -NoProfile -Command \"try {{ Invoke-WebRequest -Uri '%LAUNCHER_URL%' -OutFile '%INSTALL_DIR%\\launcher.pyw' -UseBasicParsing; exit 0 }} catch {{ exit 1 }}\"\n"
         "if %errorlevel% neq 0 (\n"
         "    echo  [ERROR] Failed to download launcher.pyw\n"
-        "    echo  Check your internet connection and try again.\n"
-        "    pause\n"
-        "    exit /b 1\n"
-        ")\n"
-        "\n"
-        "if not exist \"%INSTALL_DIR%\\launcher.pyw\" (\n"
-        "    echo  [ERROR] launcher.pyw was not saved properly.\n"
         "    pause\n"
         "    exit /b 1\n"
         ")\n"
         "echo  [OK] Latest launcher downloaded.\n"
-        "\n"
         ":STEP4\n"
-        "REM ---- STEP 4: Launch (consoleless) ----\n"
         "echo.\n"
         "echo  [Step 4/5] Launching ARDA LAUNCHER...\n"
         "set \"PYTHONW=\"\n"
         "where pythonw >nul 2>&1\n"
         "if %errorlevel% equ 0 (\n"
         "    set \"PYTHONW=pythonw\"\n"
+        ") else if exist \"%LOCALAPPDATA%\\Programs\\Python\\Python312\\pythonw.exe\" (\n"
+        "    set \"PYTHONW=%LOCALAPPDATA%\\Programs\\Python\\Python312\\pythonw.exe\"\n"
+        ") else if exist \"%ProgramFiles%\\Python312\\pythonw.exe\" (\n"
+        "    set \"PYTHONW=%ProgramFiles%\\Python312\\pythonw.exe\"\n"
         ") else (\n"
-        "    if exist \"%LOCALAPPDATA%\\Programs\\Python\\Python312\\pythonw.exe\" (\n"
-        "        set \"PYTHONW=%LOCALAPPDATA%\\Programs\\Python\\Python312\\pythonw.exe\"\n"
-        "    ) else if exist \"%ProgramFiles%\\Python312\\pythonw.exe\" (\n"
-        "        set \"PYTHONW=%ProgramFiles%\\Python312\\pythonw.exe\"\n"
-        "    ) else (\n"
-        "        set \"PYTHONW=python\"\n"
-        "    )\n"
+        "    set \"PYTHONW=python\"\n"
         ")\n"
-        "\n"
-        "if \"%PYTHONW%\"==\"pythonw\" (\n"
-        "    start \"\" pythonw \"%INSTALL_DIR%\\launcher.pyw\"\n"
-        ") else (\n"
-        "    start \"\" \"%PYTHONW%\" \"%INSTALL_DIR%\\launcher.pyw\"\n"
-        ")\n"
-        "echo  [OK] ARDA LAUNCHER launched. A desktop shortcut will be created automatically.\n"
-        "\n"
+        "start \"\" \"%PYTHONW%\" \"%INSTALL_DIR%\\launcher.pyw\"\n"
         ":STEP5\n"
-        "REM ---- STEP 5: Success ----\n"
         "echo.\n"
         "echo  ============================================================\n"
         "echo     SUCCESS!\n"
         "echo  ============================================================\n"
-        "echo.\n"
         "echo   ARDA LAUNCHER has been successfully installed and launched!\n"
-        "echo.\n"
-        "echo   Install location: %INSTALL_DIR%\n"
-        "echo   A desktop shortcut will be created automatically.\n"
-        "echo.\n"
-        "echo   You can close this window now.\n"
-        "echo.\n"
         "pause\n"
         "exit /b 0\n"
     )
@@ -290,12 +307,9 @@ class AutoUpdater:
         if not url: return True
         u = url.strip().lower()
         if u in ("https://githubusercontent.com", "https://raw.githubusercontent.com",
-                 "https://github.com", "https://github.com/"):
-            return True
-        if "kullanici" in u or "/your-user/" in u or "/your-username/" in u:
-            return True
+                 "https://github.com", "https://github.com/"): return True
+        if "kullanici" in u or "/your-user/" in u: return True
         return False
-
     @staticmethod
     def parse_version(v):
         try:
@@ -304,15 +318,12 @@ class AutoUpdater:
                 digits = "".join(c for c in x if c.isdigit())
                 if digits: parts.append(int(digits))
             return parts if parts else [0]
-        except Exception:
-            return [0]
-
+        except Exception: return [0]
     @staticmethod
     def check(version_url, current_version, timeout=5):
         if AutoUpdater.is_placeholder(version_url): return None
         try:
-            r = requests.get(version_url, timeout=timeout,
-                             headers={**HEADERS, "Accept": "application/json"})
+            r = requests.get(version_url, timeout=timeout, headers={**HEADERS, "Accept": "application/json"})
             if r.status_code != 200: return None
             try: data = r.json()
             except Exception: return None
@@ -325,29 +336,23 @@ class AutoUpdater:
         except Exception: return None
 
 # ======================================================================
-# GITHUB PUBLISHER (launcher.pyw + version.json + ArdaLauncher_Installer.bat)
+# GITHUB PUBLISHER
 # ======================================================================
 class GitHubPublisher:
     def __init__(self, token, owner, repo, branch="main"):
-        self.token = token.strip()
-        self.owner = owner.strip()
-        self.repo = repo.strip()
-        self.branch = (branch or "main").strip()
+        self.token = token.strip(); self.owner = owner.strip()
+        self.repo = repo.strip(); self.branch = (branch or "main").strip()
         self.api = f"https://api.github.com/repos/{self.owner}/{self.repo}/contents"
-        self.headers = {
-            "Authorization": f"token {self.token}",
-            "Accept": "application/vnd.github+json",
-            "User-Agent": "ArdaLauncher-Publisher/8.4",
-            "X-GitHub-Api-Version": "2022-11-28",
-        }
-
+        self.headers = {"Authorization": f"token {self.token}",
+                        "Accept": "application/vnd.github+json",
+                        "User-Agent": "ArdaLauncher-Publisher/8.6",
+                        "X-GitHub-Api-Version": "2022-11-28"}
     def _get_sha(self, path):
         try:
             r = requests.get(f"{self.api}/{path}?ref={self.branch}", headers=self.headers, timeout=12)
             if r.status_code == 200: return r.json().get("sha")
             return None
         except Exception: return None
-
     def _put_file(self, path, content_bytes, message):
         sha = self._get_sha(path)
         payload = {"message": message,
@@ -359,7 +364,6 @@ class GitHubPublisher:
         try: err = r.json().get("message", r.text[:200])
         except Exception: err = r.text[:200]
         return {"ok": False, "status": r.status_code, "error": err}
-
     @staticmethod
     def patch_content(content, new_version, owner, repo, branch):
         try:
@@ -373,7 +377,6 @@ class GitHubPublisher:
                              f'UPDATE_CODE_URL = "{code_url}"', content, flags=re.MULTILINE)
         except Exception as e: print(f"[PATCH] {e}")
         return content.encode("utf-8")
-
     def publish(self, script_path, new_version, notes, progress_cb=None):
         if not os.path.exists(script_path):
             return {"ok": False, "error": "launcher.pyw bulunamadı."}
@@ -385,51 +388,34 @@ class GitHubPublisher:
         if progress_cb: progress_cb("Preparing launcher.pyw...", 10)
         patched = self.patch_content(content, new_version, self.owner, self.repo, self.branch)
         if progress_cb: progress_cb("Uploading launcher.pyw...", 30)
-        res1 = self._put_file("launcher.pyw", patched,
-                             f"ARDA LAUNCHER v{new_version} — code update")
+        res1 = self._put_file("launcher.pyw", patched, f"ARDA LAUNCHER v{new_version} — code update")
         if not res1.get("ok"):
-            return {"ok": False, "step": "launcher.pyw",
-                    "error": res1.get("error", "Unknown error"),
-                    "status": res1.get("status")}
+            return {"ok": False, "step": "launcher.pyw", "error": res1.get("error", "Unknown"), "status": res1.get("status")}
         if progress_cb: progress_cb("launcher.pyw uploaded ✓", 50)
-
-        ver_data = {
-            "version": new_version,
-            "notes": notes.strip() or f"ARDA LAUNCHER v{new_version}",
-            "url": f"https://raw.githubusercontent.com/{self.owner}/{self.repo}/{self.branch}/launcher.pyw",
-            "installer_url": f"https://raw.githubusercontent.com/{self.owner}/{self.repo}/{self.branch}/ArdaLauncher_Installer.bat",
-            "released": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        }
+        ver_data = {"version": new_version, "notes": notes.strip() or f"ARDA LAUNCHER v{new_version}",
+                    "url": f"https://raw.githubusercontent.com/{self.owner}/{self.repo}/{self.branch}/launcher.pyw",
+                    "installer_url": f"https://raw.githubusercontent.com/{self.owner}/{self.repo}/{self.branch}/ArdaLauncher_Installer.bat",
+                    "released": datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
         ver_bytes = json.dumps(ver_data, indent=2, ensure_ascii=False).encode("utf-8")
         if progress_cb: progress_cb("Uploading version.json...", 65)
-        res2 = self._put_file("version.json", ver_bytes,
-                             f"ARDA LAUNCHER v{new_version} — version.json")
+        res2 = self._put_file("version.json", ver_bytes, f"ARDA LAUNCHER v{new_version} — version.json")
         if not res2.get("ok"):
-            return {"ok": False, "step": "version.json",
-                    "error": res2.get("error", "Unknown error"),
-                    "status": res2.get("status")}
+            return {"ok": False, "step": "version.json", "error": res2.get("error", "Unknown"), "status": res2.get("status")}
         if progress_cb: progress_cb("version.json uploaded ✓", 80)
-
-        # --- YENİ: ArdaLauncher_Installer.bat üret ve yükle ---
         try:
             bat_str = generate_installer_bat(self.owner, self.repo, self.branch)
             bat_bytes = bat_str.encode("utf-8")
             if progress_cb: progress_cb("Uploading ArdaLauncher_Installer.bat...", 90)
-            res3 = self._put_file("ArdaLauncher_Installer.bat", bat_bytes,
-                                 f"ARDA LAUNCHER v{new_version} — installer.bat")
+            res3 = self._put_file("ArdaLauncher_Installer.bat", bat_bytes, f"ARDA LAUNCHER v{new_version} — installer.bat")
             if not res3.get("ok"):
                 return {"ok": False, "step": "ArdaLauncher_Installer.bat",
-                        "error": res3.get("error", "Unknown error"),
-                        "status": res3.get("status")}
+                        "error": res3.get("error", "Unknown"), "status": res3.get("status")}
         except Exception as e:
-            return {"ok": False, "step": "installer.bat (generate)",
-                    "error": str(e), "status": "-"}
-
+            return {"ok": False, "step": "installer.bat (generate)", "error": str(e), "status": "-"}
         if progress_cb: progress_cb("All files uploaded ✓", 100)
         return {"ok": True, "version_url": ver_data["url"],
                 "code_url": ver_data["url"].replace("version.json","launcher.pyw"),
-                "installer_url": ver_data["installer_url"],
-                "data": ver_data}
+                "installer_url": ver_data["installer_url"], "data": ver_data}
 
 # ======================================================================
 # OYUN KATALOĞU
@@ -449,12 +435,13 @@ def _steam_banner_urls(appid):
     ]
 
 OYUN_KATALOGU = {
+    # ============== MEVCUT 14 AÇIK KAYNAK OYUN ==============
     "mindustry": {"isim": "Mindustry", "repo": "Anuken/Mindustry", "exe_adi": "Mindustry.exe",
         "tur": "Strateji", "aciklama": "Tower defense ve fabrika otomasyonunu birleştiren açık kaynak oyun.",
         "sistem": "Windows 7+, 2 GB RAM, 200 MB alan", "min_ram": 2,
         "kapak_urls": _steam_cover_urls(1127400), "banner_urls": _steam_banner_urls(1127400)},
     "wesnoth": {"isim": "Battle for Wesnoth", "repo": "wesnoth/wesnoth", "exe_adi": "wesnoth.exe",
-        "tur": "Strateji", "aciklama": "Yüksek fantezi temalı sıra tabanlı strateji. 17 solo kampanya.",
+        "tur": "Strateji", "aciklama": "Yüksek fantezi temalı sıra tabanlı strateji.",
         "sistem": "Windows 7+, 2 GB RAM, 500 MB alan", "min_ram": 2,
         "kapak_urls": _steam_cover_urls(599390), "banner_urls": _steam_banner_urls(599390)},
     "endlesssky": {"isim": "Endless Sky", "repo": "endless-sky/endless-sky", "exe_adi": "EndlessSky.exe",
@@ -471,7 +458,7 @@ OYUN_KATALOGU = {
         "sistem": "Windows 7+, 1 GB RAM, 100 MB alan", "min_ram": 1,
         "kapak_urls": _steam_cover_urls(1536610), "banner_urls": _steam_banner_urls(1536610)},
     "warzone2100": {"isim": "Warzone 2100", "repo": "Warzone2100/warzone2100", "exe_adi": "warzone2100.exe",
-        "tur": "Strateji", "aciklama": "3D bilim kurgu gerçek zamanlı strateji. Birim tasarımı ve kampanya.",
+        "tur": "Strateji", "aciklama": "3D bilim kurgu gerçek zamanlı strateji.",
         "sistem": "Windows 7+, 2 GB RAM, 500 MB alan", "min_ram": 2,
         "kapak_urls": _steam_cover_urls(1241950), "banner_urls": _steam_banner_urls(1241950)},
     "cataclysm": {"isim": "Cataclysm: DDA", "repo": "CleverRaven/Cataclysm-DDA",
@@ -483,45 +470,144 @@ OYUN_KATALOGU = {
         "sistem": "Windows 7+, 2 GB RAM, 500 MB alan", "min_ram": 2,
         "kapak_urls": _steam_cover_urls(259680), "banner_urls": _steam_banner_urls(259680)},
     "unciv": {"isim": "Unciv", "repo": "yairm210/Unciv", "exe_adi": "Unciv.exe",
-        "tur": "Strateji", "aciklama": "Civilization V'in açık kaynak yeniden yapımı. Sıra tabanlı 4X strateji.",
+        "tur": "Strateji", "aciklama": "Civilization V'in açık kaynak yeniden yapımı.",
         "sistem": "Windows 7+, 2 GB RAM, 100 MB alan", "min_ram": 2,
         "kapak_urls": _steam_cover_urls(2247670), "banner_urls": _steam_banner_urls(2247670)},
     "openra": {"isim": "OpenRA", "repo": "OpenRA/OpenRA", "exe_adi": "OpenRA.exe",
         "tur": "Strateji", "aciklama": "Red Alert, Tiberian Dawn ve Dune 2000 modernize eden RTS motoru.",
         "sistem": "Windows 7+, 2 GB RAM, 500 MB alan", "min_ram": 2,
-        "kapak_urls": ["https://www.openra.net/images/social.jpg",
-                       "https://raw.githubusercontent.com/OpenRA/OpenRA/master/mods/cnc/chrome/mainmenu.png"],
+        "kapak_urls": ["https://www.openra.net/images/social.jpg"],
         "banner_urls": ["https://www.openra.net/images/social.jpg"]},
     "supertuxkart": {"isim": "SuperTuxKart", "repo": "supertuxkart/stk-code", "exe_adi": "supertuxkart.exe",
         "tur": "Yarış", "aciklama": "Tux ve arkadaşlarının 3D karting yarışı.",
         "sistem": "Windows 7+, 2 GB RAM, 500 MB alan", "min_ram": 2,
         "kapak_urls": ["https://www.supertuxkart.net/assets/gallery/STK1.0_2.jpg",
-                       "https://www.supertuxkart.net/images/screenshots/STK1.0_2.jpg",
                        "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1e/SuperTuxKart_Logo.svg/512px-SuperTuxKart_Logo.svg.png"],
-        "banner_urls": ["https://www.supertuxkart.net/assets/gallery/STK1.0_2.jpg",
-                        "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1e/SuperTuxKart_Logo.svg/1024px-SuperTuxKart_Logo.svg.png"]},
+        "banner_urls": ["https://www.supertuxkart.net/assets/gallery/STK1.0_2.jpg"]},
     "veloren": {"isim": "Veloren", "repo": "veloren/veloren", "exe_adi": "veloren.exe",
         "tur": "RPG", "aciklama": "Cube World ve Minecraft'tan ilham alan açık dünya voxel RPG.",
         "sistem": "Windows 10+, 4 GB RAM, 1 GB alan", "min_ram": 4,
-        "kapak_urls": ["https://veloren.net/logo.png",
-                       "https://raw.githubusercontent.com/veloren/veloren/master/docs/logo.png",
-                       "https://raw.githubusercontent.com/veloren/veloren/main/docs/logo.png"],
-        "banner_urls": ["https://veloren.net/processed_images/0d97e31074771fbb00.png",
-                        "https://raw.githubusercontent.com/veloren/veloren/master/docs/logo.png"]},
+        "kapak_urls": ["https://veloren.net/logo.png"],
+        "banner_urls": ["https://veloren.net/processed_images/0d97e31074771fbb00.png"]},
     "zeroad": {"isim": "0 A.D.", "repo": "0ad/0ad", "exe_adi": "pyrogenesis.exe",
         "tur": "Strateji", "aciklama": "Antik savaş temalı, ücretsiz ve açık kaynaklı RTS.",
         "sistem": "Windows 7+, 2 GB RAM, 1 GB alan", "min_ram": 2,
         "kapak_urls": ["https://play0ad.com/wp-content/uploads/2021/07/cropped-0ad_logo_512.png",
-                       "https://play0ad.com/wp-content/themes/play0ad/images/logo.png",
-                       "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a5/0_AD_logo.svg/512px-0_AD_logo.svg.png",
                        "https://cdn.akamai.steamstatic.com/steam/apps/37060/library_600x900.jpg"],
-        "banner_urls": ["https://play0ad.com/wp-content/uploads/2021/07/0ad_banner.jpg",
-                        "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a5/0_AD_logo.svg/1024px-0_AD_logo.svg.png",
-                        "https://cdn.akamai.steamstatic.com/steam/apps/37060/header.jpg"]},
+        "banner_urls": ["https://cdn.akamai.steamstatic.com/steam/apps/37060/header.jpg"]},
     "ddnet": {"isim": "DDNet (Teeworlds)", "repo": "ddnet/ddnet", "exe_adi": "DDNet.exe",
         "tur": "Aksiyon", "aciklama": "Teeworlds tabanlı çok oyunculu 2D aksiyon.",
         "sistem": "Windows 7+, 1 GB RAM, 100 MB alan", "min_ram": 1,
         "kapak_urls": _steam_cover_urls(380840), "banner_urls": _steam_banner_urls(380840)},
+
+    # ============== 6 AÇIK KAYNAK 3D OYUN ==============
+    "xonotic": {"isim": "Xonotic", "repo": "xonotic/xonotic", "exe_adi": "xonotic-x86_64.exe",
+        "url": "http://dl.xonotic.org/xonotic-0.8.2.zip",
+        "tur": "Aksiyon", "aciklama": "Hızlı tempolu, arena tarzı açık kaynak 3D FPS.",
+        "sistem": "Windows 7+, 2 GB RAM, 1 GB alan", "min_ram": 2,
+        "kapak_urls": ["https://www.xonotic.org/static/images/xonotic-logo.png"],
+        "banner_urls": ["https://www.xonotic.org/static/images/xonotic-logo.png"]},
+    "assaultcube": {"isim": "AssaultCube", "repo": "assaultcube/AC", "exe_adi": "assaultcube.exe",
+        "tur": "Aksiyon", "aciklama": "Klasik taktiksel 3D FPS. Küçük boyutlu ve hızlı.",
+        "sistem": "Windows 7+, 1 GB RAM, 200 MB alan", "min_ram": 1,
+        "kapak_urls": ["https://assault.cubers.net/images/ac_logo.png"],
+        "banner_urls": ["https://assault.cubers.net/images/ac_logo.png"]},
+    "openspades": {"isim": "OpenSpades", "repo": "yvt/openspades", "exe_adi": "OpenSpades.exe",
+        "tur": "Aksiyon", "aciklama": "Voxel tabanlı 3D takım FPS. Ace of Spades'in açık kaynak yeniden yapımı.",
+        "sistem": "Windows 7+, 2 GB RAM, 300 MB alan", "min_ram": 2,
+        "kapak_urls": ["https://raw.githubusercontent.com/yvt/openspades/master/Resources/Icons/openspades.png"],
+        "banner_urls": ["https://raw.githubusercontent.com/yvt/openspades/master/Resources/Icons/openspades.png"]},
+    "rigs_of_rods": {"isim": "Rigs of Rods", "repo": "RigsOfRods/rigs-of-rods", "exe_adi": "RoR.exe",
+        "tur": "Simülasyon", "aciklama": "Gerçekçi soft-body araç ve kamyon fiziği simülasyonu.",
+        "sistem": "Windows 7+, 4 GB RAM, 1 GB alan", "min_ram": 4,
+        "kapak_urls": ["https://raw.githubusercontent.com/RigsOfRods/rigs-of-rods/master/doc/images/RoR_Logo_full.png"],
+        "banner_urls": ["https://raw.githubusercontent.com/RigsOfRods/rigs-of-rods/master/doc/images/RoR_Logo_full.png"]},
+    "redeclipse": {"isim": "Red Eclipse", "repo": "redeclipse/base", "exe_adi": "redeclipse.exe",
+        "tur": "Aksiyon", "aciklama": "Parkur ve arena odaklı 3D FPS. Hızlı hareket ve akrobasi.",
+        "sistem": "Windows 7+, 2 GB RAM, 600 MB alan", "min_ram": 2,
+        "kapak_urls": ["https://www.redeclipse.net/images/logo.png"],
+        "banner_urls": ["https://www.redeclipse.net/images/logo.png"]},
+    "stuntrally": {"isim": "Stunt Rally", "repo": "stuntrally/stuntrally3", "exe_adi": "stuntrally.exe",
+        "tur": "Yarış", "aciklama": "3D ralli ve akrobasi yarış oyunu. Parkur editörü dahil.",
+        "sistem": "Windows 7+, 4 GB RAM, 2 GB alan", "min_ram": 4,
+        "kapak_urls": ["https://raw.githubusercontent.com/stuntrally/stuntrally3/master/data/gui/stuntrally_logo.png"],
+        "banner_urls": ["https://raw.githubusercontent.com/stuntrally/stuntrally3/master/data/gui/stuntrally_logo.png"]},
+
+    # ============== v8.5'TEKİ 6 F2P STEAM OYUNU ==============
+    "cs2": {"isim": "Counter-Strike 2", "steam_appid": 730, "exe_adi": "",
+        "tur": "Aksiyon", "aciklama": "Valve'ın efsanevi taktiksel FPS serisinin Source 2 motorlu son sürümü.",
+        "sistem": "Windows 10+, 8 GB RAM, 60 GB alan", "min_ram": 8,
+        "kapak_urls": _steam_cover_urls(730), "banner_urls": _steam_banner_urls(730)},
+    "apex": {"isim": "Apex Legends", "steam_appid": 1172470, "exe_adi": "",
+        "tur": "Aksiyon", "aciklama": "Respawn'ın kahraman tabanlı battle royale FPS'i.",
+        "sistem": "Windows 10+, 8 GB RAM, 70 GB alan", "min_ram": 8,
+        "kapak_urls": _steam_cover_urls(1172470), "banner_urls": _steam_banner_urls(1172470)},
+    "warframe": {"isim": "Warframe", "steam_appid": 230410, "exe_adi": "",
+        "tur": "RPG", "aciklama": "Digital Extremes'in ücretsiz bilim kurgu aksiyon RPG'si.",
+        "sistem": "Windows 7+, 4 GB RAM, 50 GB alan", "min_ram": 4,
+        "kapak_urls": _steam_cover_urls(230410), "banner_urls": _steam_banner_urls(230410)},
+    "dota2": {"isim": "Dota 2", "steam_appid": 570, "exe_adi": "",
+        "tur": "Strateji", "aciklama": "Valve'ın MOBA klasiği. 100'den fazla kahraman.",
+        "sistem": "Windows 10+, 8 GB RAM, 50 GB alan", "min_ram": 8,
+        "kapak_urls": _steam_cover_urls(570), "banner_urls": _steam_banner_urls(570)},
+    "tf2": {"isim": "Team Fortress 2", "steam_appid": 440, "exe_adi": "",
+        "tur": "Aksiyon", "aciklama": "Valve'ın kahraman tabanlı takım FPS'i. 9 sınıf.",
+        "sistem": "Windows 7+, 2 GB RAM, 25 GB alan", "min_ram": 2,
+        "kapak_urls": _steam_cover_urls(440), "banner_urls": _steam_banner_urls(440)},
+    "brawlhalla": {"isim": "Brawlhalla", "steam_appid": 291550, "exe_adi": "",
+        "tur": "Aksiyon", "aciklama": "Blue Mammoth'un ücretsiz platform dövüş oyunu.",
+        "sistem": "Windows 7+, 2 GB RAM, 1 GB alan", "min_ram": 2,
+        "kapak_urls": _steam_cover_urls(291550), "banner_urls": _steam_banner_urls(291550)},
+
+    # ============== v8.6: 12 YENİ POPÜLER F2P STEAM OYUNU ==============
+    "pubg": {"isim": "PUBG: BATTLEGROUNDS", "steam_appid": 578080, "exe_adi": "",
+        "tur": "Aksiyon", "aciklama": "Battle royale türünün öncüsü. 100 oyuncu, tek kazanan.",
+        "sistem": "Windows 10+, 8 GB RAM, 40 GB alan", "min_ram": 8,
+        "kapak_urls": _steam_cover_urls(578080), "banner_urls": _steam_banner_urls(578080)},
+    "warthunder": {"isim": "War Thunder", "steam_appid": 236390, "exe_adi": "",
+        "tur": "Simülasyon", "aciklama": "Uçak, tank ve gemilerle çok oyunculu askeri savaş simülasyonu.",
+        "sistem": "Windows 10+, 4 GB RAM, 95 GB alan", "min_ram": 4,
+        "kapak_urls": _steam_cover_urls(236390), "banner_urls": _steam_banner_urls(236390)},
+    "destiny2": {"isim": "Destiny 2", "steam_appid": 1085660, "exe_adi": "",
+        "tur": "Aksiyon", "aciklama": "Bungie'nin bilim kurgu FPS-MMO'su. Güneş sisteminde kahramanlık.",
+        "sistem": "Windows 10+, 8 GB RAM, 105 GB alan", "min_ram": 8,
+        "kapak_urls": _steam_cover_urls(1085660), "banner_urls": _steam_banner_urls(1085660)},
+    "haloinfinite": {"isim": "Halo Infinite", "steam_appid": 1240440, "exe_adi": "",
+        "tur": "Aksiyon", "aciklama": "Master Chief'in son macerası. Ücretsiz çok oyunculu modu.",
+        "sistem": "Windows 10+, 8 GB RAM, 50 GB alan", "min_ram": 8,
+        "kapak_urls": _steam_cover_urls(1240440), "banner_urls": _steam_banner_urls(1240440)},
+    "sims4": {"isim": "The Sims 4", "steam_appid": 1222670, "exe_adi": "",
+        "tur": "Simülasyon", "aciklama": "Hayat simülasyonu klasiği. Karakterler yaratın, ev inşa edin.",
+        "sistem": "Windows 10+, 4 GB RAM, 26 GB alan", "min_ram": 4,
+        "kapak_urls": _steam_cover_urls(1222670), "banner_urls": _steam_banner_urls(1222670)},
+    "unturned": {"isim": "Unturned", "steam_appid": 304930, "exe_adi": "",
+        "tur": "Aksiyon", "aciklama": "Voxel grafikli zombi hayatta kalma oyunu. Arkadaşlarla oynanabilir.",
+        "sistem": "Windows 7+, 4 GB RAM, 4 GB alan", "min_ram": 4,
+        "kapak_urls": _steam_cover_urls(304930), "banner_urls": _steam_banner_urls(304930)},
+    "pathofexile": {"isim": "Path of Exile", "steam_appid": 238960, "exe_adi": "",
+        "tur": "RPG", "aciklama": "Karanlık fantezi temalı ücretsiz ARPG. Derin karakter gelişimi.",
+        "sistem": "Windows 8+, 8 GB RAM, 40 GB alan", "min_ram": 8,
+        "kapak_urls": _steam_cover_urls(238960), "banner_urls": _steam_banner_urls(238960)},
+    "overwatch2": {"isim": "Overwatch 2", "steam_appid": 2357570, "exe_adi": "",
+        "tur": "Aksiyon", "aciklama": "Blizzard'ın kahraman tabanlı 5v5 takım FPS'i.",
+        "sistem": "Windows 10+, 8 GB RAM, 50 GB alan", "min_ram": 8,
+        "kapak_urls": _steam_cover_urls(2357570), "banner_urls": _steam_banner_urls(2357570)},
+    "worldoftanks": {"isim": "World of Tanks", "steam_appid": 1407200, "exe_adi": "",
+        "tur": "Strateji", "aciklama": "20. yüzyıl tanklarıyla çok oyunculu savaş oyunu.",
+        "sistem": "Windows 7+, 4 GB RAM, 50 GB alan", "min_ram": 4,
+        "kapak_urls": _steam_cover_urls(1407200), "banner_urls": _steam_banner_urls(1407200)},
+    "marvelrivals": {"isim": "Marvel Rivals", "steam_appid": 2767030, "exe_adi": "",
+        "tur": "Aksiyon", "aciklama": "Marvel evreninden karakterlerle 6v6 kahraman nişancı oyunu.",
+        "sistem": "Windows 10+, 16 GB RAM, 70 GB alan", "min_ram": 16,
+        "kapak_urls": _steam_cover_urls(2767030), "banner_urls": _steam_banner_urls(2767030)},
+    "trackmania": {"isim": "Trackmania", "steam_appid": 2225070, "exe_adi": "",
+        "tur": "Yarış", "aciklama": "Akrobatik parkurlarda zaman yarışı. Ücretsiz başlangıç sürümü.",
+        "sistem": "Windows 10+, 8 GB RAM, 20 GB alan", "min_ram": 8,
+        "kapak_urls": _steam_cover_urls(2225070), "banner_urls": _steam_banner_urls(2225070)},
+    "stumbleguys": {"isim": "Stumble Guys", "steam_appid": 1677740, "exe_adi": "",
+        "tur": "Yarış", "aciklama": "32 oyuncuyla kaotik engel parkuru. Fall Guys tarzı eğlence.",
+        "sistem": "Windows 7+, 4 GB RAM, 2 GB alan", "min_ram": 4,
+        "kapak_urls": _steam_cover_urls(1677740), "banner_urls": _steam_banner_urls(1677740)},
 }
 
 def _refresh_eski_cache():
@@ -850,6 +936,18 @@ def _resim_indir_dogrula(urls, cache_dir=None):
         except Exception: continue
     return None
 
+def _diskten_resim_bul(urls):
+    """Disk önbelleğinden geçerli ilk resmi döndür."""
+    if not urls: return None
+    for url in urls:
+        cp = CACHE_COVERS / f"{hashlib.md5(url.encode()).hexdigest()}.png"
+        try:
+            if cp.exists() and cp.stat().st_size >= 5000:
+                Image.open(cp).verify()
+                return Image.open(cp).convert("RGB")
+        except Exception: continue
+    return None
+
 def icon_olustur():
     if ICON_DOSYASI.exists():
         try:
@@ -1039,8 +1137,13 @@ class IndirmeYoneticisi:
         auto_extract = bool(self.app.veri.get("settings", {}).get("auto_extract", True))
         try:
             self.app.after(0, lambda: self.app.detay_durum_metni(oid, "Sürüm kontrol ediliyor..."))
-            asset = GitHubMotoru.windows_asset(oyun["repo"])
-            if not asset: raise RuntimeError(f"'{oyun['repo']}' için Windows paketi bulunamadı.")
+            asset = None
+            if oyun.get("url"):
+                asset = {"name": oyun["url"].split("/")[-1], "url": oyun["url"], "size": 0}
+            else:
+                asset = GitHubMotoru.windows_asset(oyun.get("repo", ""))
+            if not asset:
+                raise RuntimeError(f"Paket bulunamadı.")
             with self.lock:
                 if oid in self.aktif:
                     self.aktif[oid]["asset"] = asset; self.aktif[oid]["durum"] = "indiriliyor"
@@ -1094,9 +1197,10 @@ class IndirmeYoneticisi:
                         if hedef_exe.exists(): hedef_exe.unlink()
                         shutil.move(str(part), str(hedef_exe))
                     except Exception: pass
-            exe_yolu = None; aranan = oyun["exe_adi"]
-            for p in [hedef / aranan] + list(hedef.rglob(aranan)):
-                if p.exists(): exe_yolu = p; break
+            exe_yolu = None; aranan = oyun.get("exe_adi", "")
+            if aranan:
+                for p in [hedef / aranan] + list(hedef.rglob(aranan)):
+                    if p.exists(): exe_yolu = p; break
             if not exe_yolu:
                 exes = list(hedef.rglob("*.exe"))
                 if exes:
@@ -1130,6 +1234,7 @@ class OyunKarti(ctk.CTkFrame):
                      text_color=RENKLER["metin"], wraplength=w+10).grid(row=1, column=0, padx=8, sticky="w")
         sure = app.veri["oyunlar"].get(oid, {}).get("oynama_suresi", 0)
         alt = oyun["tur"] + (f" • {fmt_sure(sure)}" if sure > 0 else "")
+        if oyun.get("steam_appid"): alt = "F2P • " + alt
         ctk.CTkLabel(self, text=alt, font=ctk.CTkFont(size=10),
                      text_color=RENKLER["soluk"]).grid(row=2, column=0, padx=8, pady=(0, 10), sticky="w")
         self.fav_btn = ctk.CTkButton(self, text="❤️" if favori else "🤍", width=30, height=30,
@@ -1236,12 +1341,9 @@ class ArdaLauncher(ctk.CTk):
                          text_color=RENKLER["metin"]).pack(pady=(20, 5), padx=20)
             ctk.CTkLabel(win, text=f"Mevcut: v{APP_VERSION} → Yeni: v{remote_v}",
                          font=ctk.CTkFont(size=12), text_color=RENKLER["soluk"]).pack()
-            ctk.CTkLabel(win, text="📋 Yama Notları:",
-                         font=ctk.CTkFont(size=13, weight="bold"),
-                         text_color=RENKLER["metin"]).pack(anchor="w", padx=20, pady=(15, 5))
             tb = ctk.CTkTextbox(win, height=180, fg_color=RENKLER["kart"],
                                  text_color=RENKLER["metin"], font=ctk.CTkFont(size=12))
-            tb.pack(fill="both", expand=True, padx=20, pady=(0, 10))
+            tb.pack(fill="both", expand=True, padx=20, pady=(15, 10))
             tb.insert("1.0", notes); tb.configure(state="disabled")
             bf = ctk.CTkFrame(win, fg_color="transparent"); bf.pack(pady=(0, 20))
             def do_update():
@@ -1301,8 +1403,49 @@ class ArdaLauncher(ctk.CTk):
                 self.after(0, lambda: messagebox.showerror("Hata", f"Kontrol başarısız: {e}"))
         threading.Thread(target=work, daemon=True).start()
 
+    # ============ FLICKER-FREE GÖRSEL YÜKLEME ============
     def gorsel_yukle_guvenli(self, label, oid, tur_adi, urls, boyut, isim, tur, overlay=False):
+        """RAM → Disk → Placeholder → Network sırasıyla dener. Titreşim yok."""
         key = f"{oid}_{tur_adi}_{boyut[0]}x{boyut[1]}"
+
+        # 1. RAM önbelleği — anında göster
+        if key in self.image_refs:
+            try:
+                cached = self.image_refs[key]
+                label._arda_ref = cached
+                label.configure(image=cached, text="")
+                return
+            except Exception:
+                pass
+
+        # 2. Placeholder: oyun türüne uygun koyu arka plan
+        try:
+            palet = PALETLER.get(tur, PALETLER["Araçlar"])
+            bg_c = tuple(max(28, min(70, c)) for c in palet[0])
+            placeholder = Image.new("RGB", boyut, bg_c)
+            ph_ctk = ctk.CTkImage(light_image=placeholder, dark_image=placeholder, size=boyut)
+            label._arda_ref = ph_ctk
+            label.configure(image=ph_ctk, text="")
+        except Exception:
+            pass
+
+        # 3. Disk önbelleği — internet beklemeden anında yükle
+        disk_img = _diskten_resim_bul(urls or [])
+        if disk_img is not None:
+            try:
+                if overlay:
+                    final = banner_overlay(akilli_kirp(disk_img, boyut))
+                else:
+                    final = akilli_kirp(disk_img, boyut)
+                ci = ctk.CTkImage(light_image=final, dark_image=final, size=boyut)
+                self.image_refs[key] = ci
+                label._arda_ref = ci
+                label.configure(image=ci, text="")
+                return
+            except Exception:
+                pass
+
+        # 4. Ağ — arka planda indir
         def _worker():
             img = _resim_indir_dogrula(urls or [], CACHE_COVERS)
             if img is None: img = sinematik_kapak_uret(isim, tur, boyut)
@@ -1500,7 +1643,7 @@ class ArdaLauncher(ctk.CTk):
         self.arama_entry.grid(row=0, column=0, sticky="w")
         self.arama_entry.bind("<KeyRelease>", self._arama_degisti)
         self.kat_seg = ctk.CTkSegmentedButton(
-            bar, values=["Tümü","Strateji","Yarış","RPG","Roguelike","Simülasyon","Aksiyon","Kurulu Olanlar"],
+            bar, values=["Tümü","Strateji","Yarış","RPG","Roguelike","Simülasyon","Aksiyon","Popüler F2P","Kurulu Olanlar"],
             command=self._kat_degisti, fg_color=RENKLER["yan"], selected_color=RENKLER["vurgu"],
             selected_hover_color=RENKLER["vurgu_hover"], unselected_color=RENKLER["yan"],
             unselected_hover_color=RENKLER["kart_hover"], text_color=RENKLER["metin"])
@@ -1532,7 +1675,7 @@ class ArdaLauncher(ctk.CTk):
             except Exception: pass
             self._monitor_job = self.after(refresh, self._sistem_monitor)
 
-    # ============ HERO CAROUSEL — SCROLL FIX ============
+    # ============ HERO CAROUSEL ============
     def _auto_slider(self):
         try:
             if (self.aktif_sayfa == "kesfet" and not self.arama
@@ -1593,9 +1736,12 @@ class ArdaLauncher(ctk.CTk):
         k = self.kat_seg.get()
         if k == "Tümü": return True
         if k == "Kurulu Olanlar": return self._kurulu_mu(oid, o)
+        if k == "Popüler F2P": return bool(o.get("steam_appid"))
         return o.get("tur", "") == k
 
     def _kurulu_mu(self, oid, o):
+        if o.get("steam_appid"):
+            return _steam_game_installed(o["steam_appid"])
         exe = o.get("exe_adi")
         if not exe: return False
         kayitli = self.veri["oyunlar"].get(oid, {}).get("exe_yolu")
@@ -1603,7 +1749,7 @@ class ArdaLauncher(ctk.CTk):
         k = self.oyunlar_dizini / oid
         return k.exists() and any(k.rglob(exe))
 
-    # ============ SCROLL KONUMU KORUMALI SAYFA DEĞİŞTİRME ============
+    # ============ SCROLL KONUMU KORUMALI ============
     def _scroll_kaydet(self, sayfa):
         try:
             pos = self.icerik._parent_canvas.yview()[0]
@@ -1637,7 +1783,7 @@ class ArdaLauncher(ctk.CTk):
             self.after(50, lambda p=saved: self._scroll_geri_yukle(p))
 
     def _kesfet(self):
-        one = ["mindustry","openttd","warzone2100","zeroad","veloren","supertuxkart"]
+        one = ["pubg","cs2","marvelrivals","apex","xonotic","stuntrally"]
         one = [x for x in one if x in self.oyunlar]
         if not one: one = list(self.oyunlar.keys())[:6]
         self._hero_index %= max(len(one), 1)
@@ -1718,7 +1864,7 @@ class ArdaLauncher(ctk.CTk):
             ctk.CTkButton(btn_f, text=t, width=130, height=35, fg_color=c, command=cb).pack(side="left", padx=4)
         kurulu = [(oid, o) for oid, o in self.oyunlar.items() if self._kurulu_mu(oid, o)]
         if not kurulu:
-            ctk.CTkLabel(self.icerik, text="Kütüphanenizde henüz oyun yok.\n'Keşfet'ten indirin veya 'Klasör Tara' kullanın.",
+            ctk.CTkLabel(self.icerik, text="Kütüphanenizde henüz oyun yok.",
                          font=ctk.CTkFont(size=14), text_color=RENKLER["soluk"], justify="left").grid(
                 row=1, column=0, columnspan=4, pady=50, sticky="w"); return
         if self.veri["koleksiyonlar"]:
@@ -1887,7 +2033,6 @@ class ArdaLauncher(ctk.CTk):
         self.oyunlar_dizini = p; self.veri["indirme_dizini"] = str(p)
         save_json(DATA_DOSYASI, self.veri)
         self._update_entry(self.games_path_entry, p)
-        self.durum(f"🎮 {p}")
         messagebox.showinfo("Başarılı", f"✅ {p}")
         self.sayfa_degistir("ayarlar")
 
@@ -1904,7 +2049,6 @@ class ArdaLauncher(ctk.CTk):
         self.yedek_dizini = p; self.veri["yedek_dizini"] = str(p)
         save_json(DATA_DOSYASI, self.veri)
         self._update_entry(self.backups_path_entry, p)
-        self.durum(f"💾 {p}")
         messagebox.showinfo("Başarılı", f"✅ {p}")
         self.sayfa_degistir("ayarlar")
 
@@ -1970,6 +2114,9 @@ class ArdaLauncher(ctk.CTk):
 
     def oyun_kaldir(self, oid):
         oyun = self.oyunlar[oid]
+        if oyun.get("steam_appid"):
+            messagebox.showinfo("Bilgi", "Steam oyunları Steam üzerinden kaldırılmalıdır.")
+            return
         if not messagebox.askyesno("Kaldır", f"'{oyun['isim']}' silinsin mi?"): return
         k = self.oyunlar_dizini / oid
         if k.exists():
@@ -2030,6 +2177,7 @@ class ArdaLauncher(ctk.CTk):
             if x.is_file():
                 try: x.unlink()
                 except Exception: pass
+        self.image_refs.clear()
         self.sayfa_degistir("ayarlar")
     def sifirla(self):
         if messagebox.askyesno("Onay", "Tüm veriler silinecek?"):
@@ -2039,9 +2187,7 @@ class ArdaLauncher(ctk.CTk):
             save_json(DATA_DOSYASI, self.veri)
             self.sayfa_degistir("ayarlar")
 
-    # ============ YENİ: İNGİLİZCE INSTALLER .BAT DIŞA AKTAR ============
     def _export_installer_bat(self):
-        """Kullanıcının seçtiği konuma İngilizce tam otomatik kurulum .bat dosyası kaydeder."""
         try:
             d = self.veri.get("dev", {})
             owner = (d.get("owner") or DEFAULT_GH_OWNER).strip()
@@ -2057,15 +2203,7 @@ class ArdaLauncher(ctk.CTk):
                 fp.write(bat_content)
             self._aktivite_ekle(f"Installer .bat dışa aktarıldı: {Path(f).name}")
             messagebox.showinfo("Başarılı",
-                f"✅ English Installer created:\n{f}\n\n"
-                f"📦 Repo: {owner}/{repo} ({branch})\n"
-                f"🔗 Download URL: https://raw.githubusercontent.com/{owner}/{repo}/{branch}/launcher.pyw\n\n"
-                "Share this .bat file with friends. When they double-click it:\n"
-                "  1. Python is auto-installed (via winget if missing)\n"
-                "  2. Required libraries are installed\n"
-                "  3. ARDA LAUNCHER is downloaded to %LOCALAPPDATA%\\ArdaLauncher\n"
-                "  4. It is launched automatically\n"
-                "  5. A desktop shortcut is created by the launcher itself")
+                f"✅ English Installer created:\n{f}\n\n📦 Repo: {owner}/{repo} ({branch})")
         except Exception as e:
             messagebox.showerror("Hata", f"Installer oluşturulamadı:\n{e}")
 
@@ -2103,10 +2241,7 @@ class ArdaLauncher(ctk.CTk):
         if not script:
             messagebox.showerror("Hata", "launcher.pyw yolu tespit edilemedi."); return
         if not messagebox.askyesno("Yayınla",
-            f"Yüklenecek 3 dosya:\n\n"
-            f"📦 {owner}/{repo}\n🌿 {branch}\n🔖 v{new_version}\n\n"
-            f"• launcher.pyw\n• version.json\n• ArdaLauncher_Installer.bat\n\n"
-            f"Devam?"):
+            f"Yüklenecek 3 dosya:\n\n📦 {owner}/{repo}\n🌿 {branch}\n🔖 v{new_version}\n\nDevam?"):
             return
         self.veri["dev"] = {"owner": owner, "repo": repo, "token": token, "branch": branch,
                             "next_version": new_version, "notes": notes}
@@ -2140,15 +2275,10 @@ class ArdaLauncher(ctk.CTk):
         if res.get("ok"):
             self.dev_status_lbl.configure(text=f"✅ Yayınlandı! v{new_version}", text_color=RENKLER["yesil"])
             self.dev_progress.set(1.0)
-            msg = (f"✅ v{new_version} başarıyla yayınlandı!\n\n"
-                   f"📦 {owner}/{repo} ({branch})\n\n"
-                   f"Yüklenen dosyalar:\n"
-                   f"• launcher.pyw\n• version.json\n• ArdaLauncher_Installer.bat\n\n"
-                   f"🔗 Installer (paylaşılabilir):\n"
-                   f"https://raw.githubusercontent.com/{owner}/{repo}/{branch}/ArdaLauncher_Installer.bat\n\n"
-                   f"Kullanıcılar bir sonraki açılışta otomatik güncelleme alacak.")
             self._aktivite_ekle(f"v{new_version} yayınlandı → {owner}/{repo}")
-            messagebox.showinfo("Başarılı", msg)
+            messagebox.showinfo("Başarılı",
+                f"✅ v{new_version} başarıyla yayınlandı!\n\n📦 {owner}/{repo} ({branch})\n\n"
+                f"• launcher.pyw\n• version.json\n• ArdaLauncher_Installer.bat")
         else:
             self.dev_status_lbl.configure(text=f"❌ Hata: {res.get('error','?')}", text_color=RENKLER["kirmizi"])
             messagebox.showerror("Yayın Hatası",
@@ -2173,7 +2303,7 @@ class ArdaLauncher(ctk.CTk):
                 r = requests.get(f"https://api.github.com/repos/{owner}/{repo}",
                                  headers={"Authorization": f"token {token}",
                                           "Accept": "application/vnd.github+json",
-                                          "User-Agent": "ArdaLauncher-Publisher/8.4"},
+                                          "User-Agent": "ArdaLauncher-Publisher/8.6"},
                                  timeout=10)
                 if r.status_code == 200:
                     data = r.json()
@@ -2181,12 +2311,9 @@ class ArdaLauncher(ctk.CTk):
                     push = perms.get("push", False)
                     self.after(0, lambda: messagebox.showinfo(
                         "Bağlantı Başarılı",
-                        f"✅ Repo: {data.get('full_name')}\n"
-                        f"🌿 Default branch: {data.get('default_branch')}\n"
-                        f"📝 Push yetkisi: {'✅ VAR' if push else '❌ YOK'}"))
+                        f"✅ Repo: {data.get('full_name')}\nPush: {'✅' if push else '❌'}"))
                 else:
-                    self.after(0, lambda: messagebox.showerror("Hata",
-                        f"HTTP {r.status_code}\nPAT 'repo' scope kontrol edin."))
+                    self.after(0, lambda: messagebox.showerror("Hata", f"HTTP {r.status_code}"))
             except Exception as e:
                 err = str(e)
                 self.after(0, lambda: messagebox.showerror("Hata", err))
@@ -2248,19 +2375,6 @@ class ArdaLauncher(ctk.CTk):
         ctk.CTkButton(r3, text="📂 Aç", width=70, height=34, fg_color=RENKLER["yan"],
                       command=lambda: self._dizin_ac(self.yedek_dizini)).pack(side="left", padx=2)
 
-        try:
-            total, used, free = disk_usage_gb(self.oyunlar_dizini)
-            ob = folder_size_bayt(self.oyunlar_dizini) / (1024**3)
-            df = ctk.CTkFrame(f, fg_color=RENKLER["yan"], corner_radius=8)
-            df.pack(fill="x", pady=(10, 5))
-            ctk.CTkLabel(df, text=f"💽 {used:.1f}/{total:.1f} GB • Oyunlar: {ob:.2f} GB",
-                         font=ctk.CTkFont(size=12, weight="bold"),
-                         text_color=RENKLER["metin"]).pack(padx=10, pady=(8, 4), anchor="w")
-            db = ctk.CTkProgressBar(df, height=10, progress_color=RENKLER["vurgu"])
-            db.pack(fill="x", padx=10, pady=(0, 10))
-            db.set(used / total if total > 0 else 0)
-        except Exception: pass
-
         # TAB 2
         g = ctk.CTkFrame(t2, fg_color="transparent"); g.pack(fill="x", padx=10, pady=5)
         ctk.CTkLabel(g, text="İndirme Hız Limiti:", font=ctk.CTkFont(size=13, weight="bold"),
@@ -2296,7 +2410,7 @@ class ArdaLauncher(ctk.CTk):
                           hover_color=tt["hover"],
                           command=lambda a=ak: self.tema_degistir(a)).pack(side="left", padx=3)
 
-        # TAB 5 — BAKIM + INSTALLER EXPORT + DEV MODE
+        # TAB 5
         j = ctk.CTkFrame(t5, fg_color="transparent"); j.pack(fill="x", padx=10, pady=5)
         upd_frame = ctk.CTkFrame(j, fg_color=RENKLER["yan"], corner_radius=8)
         upd_frame.pack(fill="x", pady=(0, 10))
@@ -2307,18 +2421,12 @@ class ArdaLauncher(ctk.CTk):
                       fg_color=RENKLER["vurgu"], hover_color=RENKLER["vurgu_hover"],
                       command=self._manuel_guncelleme_denetle).pack(fill="x", padx=12, pady=(0, 10))
 
-        # --- YENİ: ENGLISH INSTALLER EXPORT ---
         inst_frame = ctk.CTkFrame(j, fg_color="#102030", corner_radius=8,
                                    border_width=1, border_color="#2a4a6a")
         inst_frame.pack(fill="x", pady=(0, 10))
         ctk.CTkLabel(inst_frame, text="📦 English Installer Export",
                      font=ctk.CTkFont(size=13, weight="bold"),
                      text_color=RENKLER["neon_mavi"]).pack(anchor="w", padx=12, pady=(8, 4))
-        ctk.CTkLabel(inst_frame,
-                     text="Tek tıkla .bat kurulum dosyası üret — arkadaşlarına ver,\n"
-                          "Python + kütüphaneler + launcher otomatik kurulsun.",
-                     font=ctk.CTkFont(size=10), text_color=RENKLER["soluk"],
-                     justify="left", wraplength=560).pack(anchor="w", padx=12, pady=(0, 8))
         ctk.CTkButton(inst_frame, text="📦 Export English Installer (.bat)", height=38,
                       fg_color=RENKLER["neon_mavi"], hover_color="#00A5CC",
                       font=ctk.CTkFont(size=12, weight="bold"),
@@ -2339,7 +2447,6 @@ class ArdaLauncher(ctk.CTk):
                       fg_color=RENKLER["kirmizi"], hover_color="#B91C1C",
                       command=self.launcher_uninstall).pack(fill="x", pady=(10, 5))
 
-        # GELİŞTİRİCİ MODU
         dev_header = ctk.CTkFrame(t5, fg_color="transparent")
         dev_header.pack(fill="x", pady=(15, 0))
         self.dev_toggle_btn = ctk.CTkButton(dev_header, text="🔧 Geliştirici Modu (Gizli)",
@@ -2354,9 +2461,6 @@ class ArdaLauncher(ctk.CTk):
         ctk.CTkLabel(self.dev_frame, text="🚀 GitHub'a Sürüm Yayınla",
                      font=ctk.CTkFont(size=14, weight="bold"),
                      text_color=RENKLER["vurgu"]).pack(anchor="w", padx=12, pady=(12, 4))
-        ctk.CTkLabel(self.dev_frame,
-                     text="Yüklenen dosyalar: launcher.pyw + version.json + ArdaLauncher_Installer.bat",
-                     font=ctk.CTkFont(size=10), text_color=RENKLER["soluk"]).pack(anchor="w", padx=12, pady=(0, 10))
         def _row(lbl, value, show=None):
             r = ctk.CTkFrame(self.dev_frame, fg_color="transparent"); r.pack(fill="x", padx=12, pady=3)
             ctk.CTkLabel(r, text=lbl, width=140, anchor="w",
@@ -2542,9 +2646,11 @@ class ArdaLauncher(ctk.CTk):
                       fg_color=RENKLER["yan"], hover_color=RENKLER["kart_hover"],
                       command=lambda: self.favori_degistir(oid, True)).grid(row=0, column=1, sticky="e")
         rg = toplam_ram_gb(); mr = oyun.get("min_ram", 2); uy = rg >= mr
-        ctk.CTkLabel(self.icerik, text=f"{oyun['tur']} • {oyun.get('repo','')}",
-                     font=ctk.CTkFont(size=12), text_color=RENKLER["soluk"]).grid(
-            row=3, column=0, columnspan=4, sticky="w")
+        meta = f"{oyun['tur']}"
+        if oyun.get("steam_appid"): meta += f" • F2P • Steam AppID: {oyun['steam_appid']}"
+        elif oyun.get("repo"): meta += f" • {oyun['repo']}"
+        ctk.CTkLabel(self.icerik, text=meta, font=ctk.CTkFont(size=12),
+                     text_color=RENKLER["soluk"]).grid(row=3, column=0, columnspan=4, sticky="w")
         ctk.CTkLabel(self.icerik,
                      text=f"{'✅ Uyumlu' if uy else '⚠️ RAM Yetersiz'} "
                           f"(Sizin: {rg:.1f} GB / Gerekli: {mr} GB)",
@@ -2565,6 +2671,32 @@ class ArdaLauncher(ctk.CTk):
         self.detay_lbl.grid(row=10, column=0, columnspan=4, sticky="w", pady=(0, 10))
         br = ctk.CTkFrame(self.icerik, fg_color="transparent")
         br.grid(row=11, column=0, columnspan=4, sticky="ew"); br.grid_columnconfigure((0,1), weight=1)
+
+        if oyun.get("steam_appid"):
+            appid = oyun["steam_appid"]
+            if kurulu:
+                ctk.CTkButton(br, text="▶ OYNA (Steam)", height=48, font=ctk.CTkFont(size=16, weight="bold"),
+                              fg_color=RENKLER["yesil"], hover_color="#16A34A",
+                              command=lambda a=appid, o=oid: self._steam_oyna(o, a)).grid(
+                    row=0, column=0, padx=(0, 8), sticky="ew")
+                ctk.CTkButton(br, text="📂 Steam Kütüphanesinde", height=48,
+                              font=ctk.CTkFont(size=14), fg_color=RENKLER["yan"],
+                              hover_color=RENKLER["kart_hover"],
+                              command=lambda: self._dizin_ac(Path(_steam_install_path() or ".") / "steamapps" / "common")).grid(
+                    row=0, column=1, padx=(8, 0), sticky="ew")
+            else:
+                ctk.CTkButton(br, text="⚡ Steam Üzerinden Yükle", height=48,
+                              font=ctk.CTkFont(size=16, weight="bold"),
+                              fg_color=RENKLER["vurgu"], hover_color=RENKLER["vurgu_hover"],
+                              command=lambda a=appid: self._steam_yukle(a)).grid(
+                    row=0, column=0, columnspan=2, sticky="ew")
+            ctk.CTkLabel(self.icerik,
+                         text="ℹ️ Bu oyun Steam üzerinden yönetilir. Oynama süresi Steam tarafından takip edilir.",
+                         font=ctk.CTkFont(size=10), text_color=RENKLER["soluk"],
+                         wraplength=800, justify="left").grid(row=12, column=0, columnspan=4,
+                                                              sticky="w", pady=(8, 4))
+            return
+
         ctk.CTkButton(br, text="▶ OYNA", height=48, font=ctk.CTkFont(size=16, weight="bold"),
                       fg_color=RENKLER["yesil"], hover_color="#16A34A",
                       command=lambda: self.oyna(oid),
@@ -2596,6 +2728,24 @@ class ArdaLauncher(ctk.CTk):
                           hover_color="#DC2626",
                           command=lambda: self.oyun_kaldir(oid)).grid(row=0, column=1, padx=(5,0), sticky="ew")
 
+    def _steam_oyna(self, oid, appid):
+        oyun = self.oyunlar[oid]
+        ok = _steam_launch(appid)
+        if ok:
+            self._xp_ver(XP_ODULLERI["oyun_baslat"], "oyun_baslat")
+            self._aktivite_ekle(f"{oyun['isim']} Steam ile başlatıldı")
+            self.durum(f"{oyun['isim']} Steam ile başlatıldı.")
+            self._rozet_ver("booster")
+        else:
+            messagebox.showerror("Hata", "Steam başlatılamadı. Steam yüklü mü?")
+
+    def _steam_yukle(self, appid):
+        ok = _steam_install(appid)
+        if ok:
+            self.durum("Steam yükleme penceresi açıldı.")
+        else:
+            messagebox.showerror("Hata", "Steam yükleme başlatılamadı. Steam yüklü mü?")
+
     def favori_degistir(self, oid, detail=False):
         v = self.veri["oyunlar"].setdefault(oid, {})
         v["favori"] = not v.get("favori", False)
@@ -2610,6 +2760,9 @@ class ArdaLauncher(ctk.CTk):
                 self.after(50, lambda p=saved_pos: self._scroll_geri_yukle(p))
 
     def indir(self, oid):
+        if self.oyunlar[oid].get("steam_appid"):
+            messagebox.showinfo("Bilgi", "Bu oyun Steam üzerinden yüklenir.")
+            return
         self.indirme_yon.baslat(oid, self.oyunlar[oid])
         self._rozet_guncelle()
         if self.aktif_sayfa == "indirmeler": self._indirmeler()
@@ -2648,6 +2801,9 @@ class ArdaLauncher(ctk.CTk):
         except Exception: pass
     def oyna(self, oid):
         oyun = self.oyunlar[oid]
+        if oyun.get("steam_appid"):
+            self._steam_oyna(oid, oyun["steam_appid"])
+            return
         exe = self.veri["oyunlar"].get(oid, {}).get("exe_yolu")
         if not exe or not Path(exe).exists():
             k = self.oyunlar_dizini / oid
