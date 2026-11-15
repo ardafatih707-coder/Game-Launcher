@@ -1,7 +1,7 @@
 {
-  "version": "8.4",
-  "notes": "I’ve included an \"ArdaLauncherInstaller.bat\" file to make things easier for you; all you need to do is download and run it, okay?",
+  "version": "8.6",
+  "notes": "I just made a few corrections and deleted the old versions; don't worry, okay?",
   "url": "https://raw.githubusercontent.com/ardafatih707-coder/Game-Launcher/main/launcher.pyw",
   "installer_url": "https://raw.githubusercontent.com/ardafatih707-coder/Game-Launcher/main/ArdaLauncher_Installer.bat",
-  "released": "2026-11-15 22:32:58"
+  "released": "2026-11-15 22:50:39"
 }
