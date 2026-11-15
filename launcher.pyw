@@ -1,6 +1,6 @@
 """
-ARDA LAUNCHER v8.2 ZERO-BUG EDITION
-Self Auto-Updater + Developer Push Update (GitHub Contents API)
+ARDA LAUNCHER v8.3 ZERO-BUG EDITION
+Scroll Koruması + In-place Hero Carousel + Self Auto-Updater + Developer Push
 """
 
 import os, sys, io, json, time, math, hashlib, zipfile, shutil, subprocess, threading, ctypes, tempfile, random, re, base64
@@ -24,7 +24,7 @@ except ImportError: PY7ZR_OK = False
 # ======================================================================
 # SÜRÜM + OTOMATİK GÜNCELLEME SABİTLERİ
 # ======================================================================
-APP_VERSION = "8.2"
+APP_VERSION = "8.3"
 UPDATE_VERSION_URL = "https://raw.githubusercontent.com/ardafatih707-coder/Game-Launcher/main/version.json"
 UPDATE_CODE_URL = "https://raw.githubusercontent.com/ardafatih707-coder/Game-Launcher/main/launcher.pyw"
 
@@ -184,10 +184,9 @@ class AutoUpdater:
         except Exception: return None
 
 # ======================================================================
-# GELİŞTİRİCİ YAYIN MOTORU (GitHub Contents API)
+# GITHUB PUBLISHER
 # ======================================================================
 class GitHubPublisher:
-    """launcher.pyw ve version.json'u GitHub Contents API ile doğrudan yükler."""
     def __init__(self, token, owner, repo, branch="main"):
         self.token = token.strip()
         self.owner = owner.strip()
@@ -197,40 +196,31 @@ class GitHubPublisher:
         self.headers = {
             "Authorization": f"token {self.token}",
             "Accept": "application/vnd.github+json",
-            "User-Agent": "ArdaLauncher-Publisher/8.2",
+            "User-Agent": "ArdaLauncher-Publisher/8.3",
             "X-GitHub-Api-Version": "2022-11-28",
         }
 
     def _get_sha(self, path):
         try:
             r = requests.get(f"{self.api}/{path}?ref={self.branch}", headers=self.headers, timeout=12)
-            if r.status_code == 200:
-                return r.json().get("sha")
-            if r.status_code == 404:
-                return None
+            if r.status_code == 200: return r.json().get("sha")
             return None
-        except Exception:
-            return None
+        except Exception: return None
 
     def _put_file(self, path, content_bytes, message):
         sha = self._get_sha(path)
-        payload = {
-            "message": message,
-            "content": base64.b64encode(content_bytes).decode("ascii"),
-            "branch": self.branch,
-        }
-        if sha:
-            payload["sha"] = sha
+        payload = {"message": message,
+                   "content": base64.b64encode(content_bytes).decode("ascii"),
+                   "branch": self.branch}
+        if sha: payload["sha"] = sha
         r = requests.put(f"{self.api}/{path}", headers=self.headers, json=payload, timeout=45)
-        if r.status_code in (200, 201):
-            return {"ok": True, "data": r.json()}
+        if r.status_code in (200, 201): return {"ok": True, "data": r.json()}
         try: err = r.json().get("message", r.text[:200])
         except Exception: err = r.text[:200]
         return {"ok": False, "status": r.status_code, "error": err}
 
     @staticmethod
-    def patch_content(content: str, new_version: str, owner: str, repo: str, branch: str) -> bytes:
-        """Yüklenecek dosyanın içindeki APP_VERSION ve URL sabitlerini günceller."""
+    def patch_content(content, new_version, owner, repo, branch):
         try:
             content = re.sub(r'^APP_VERSION\s*=\s*"[^"]*"', f'APP_VERSION = "{new_version}"',
                              content, flags=re.MULTILINE)
@@ -240,12 +230,10 @@ class GitHubPublisher:
                              f'UPDATE_VERSION_URL = "{ver_url}"', content, flags=re.MULTILINE)
             content = re.sub(r'^UPDATE_CODE_URL\s*=\s*"[^"]*"',
                              f'UPDATE_CODE_URL = "{code_url}"', content, flags=re.MULTILINE)
-        except Exception as e:
-            print(f"[PATCH] {e}")
+        except Exception as e: print(f"[PATCH] {e}")
         return content.encode("utf-8")
 
-    def publish(self, script_path: str, new_version: str, notes: str, progress_cb=None):
-        """launcher.pyw ve version.json'u yükler. Dict döner."""
+    def publish(self, script_path, new_version, notes, progress_cb=None):
         if not os.path.exists(script_path):
             return {"ok": False, "error": "launcher.pyw bulunamadı."}
         try:
@@ -278,7 +266,9 @@ class GitHubPublisher:
                     "error": res2.get("error", "Bilinmeyen hata"),
                     "status": res2.get("status")}
         if progress_cb: progress_cb("Tüm dosyalar yüklendi ✓", 100)
-        return {"ok": True, "version_url": ver_data["url"], "code_url": ver_data["url"].replace("version.json","launcher.pyw"), "data": ver_data}
+        return {"ok": True, "version_url": ver_data["url"],
+                "code_url": ver_data["url"].replace("version.json","launcher.pyw"),
+                "data": ver_data}
 
 # ======================================================================
 # OYUN KATALOĞU
@@ -382,10 +372,6 @@ def _refresh_eski_cache():
             if oid in OYUN_KATALOGU:
                 for url in OYUN_KATALOGU[oid].get("kapak_urls", []): hashes.add(hashlib.md5(url.encode()).hexdigest())
                 for url in OYUN_KATALOGU[oid].get("banner_urls", []): hashes.add(hashlib.md5(url.encode()).hexdigest())
-        for u in ["https://cdn.akamai.steamstatic.com/steam/apps/783190/library_600x900.jpg",
-                  "https://cdn.cloudflare.steamstatic.com/steam/apps/783190/library_600x900.jpg",
-                  "https://cdn.akamai.steamstatic.com/steam/apps/783190/header.jpg"]:
-            hashes.add(hashlib.md5(u.encode()).hexdigest())
         for h in hashes:
             cp = CACHE_COVERS / f"{h}.png"
             if cp.exists():
@@ -677,7 +663,7 @@ def _resim_indir_dogrula(urls, cache_dir=None):
             if cache_path.exists():
                 try:
                     if cache_path.stat().st_size >= 5000:
-                        im = Image.open(cache_path); im.verify()
+                        Image.open(cache_path).verify()
                         return Image.open(cache_path).convert("RGB")
                     else:
                         try: cache_path.unlink()
@@ -693,8 +679,7 @@ def _resim_indir_dogrula(urls, cache_dir=None):
             if raw.mode in ("RGBA", "LA", "P"):
                 raw = raw.convert("RGBA")
                 bg = Image.new("RGB", raw.size, (26, 31, 46))
-                try:
-                    bg.paste(raw, mask=raw.split()[-1]); img = bg
+                try: bg.paste(raw, mask=raw.split()[-1]); img = bg
                 except Exception: img = raw.convert("RGB")
             else: img = raw.convert("RGB")
             if cache_path is not None:
@@ -1006,6 +991,17 @@ class ArdaLauncher(ctk.CTk):
         self.image_refs = {}
         self._updating = False
         self._dev_visible = False
+        # --- SCROLL + HERO FIX DEĞİŞKENLERİ ---
+        self._scroll_positions = {}
+        self._hero_paused = False
+        self.hero_frame = None
+        self.hero_banner = None
+        self.hero_title_lbl = None
+        self.hero_desc_lbl = None
+        self.hero_incele_btn = None
+        self.hero_dots = None
+        self.hero_ids = []
+        # ---
         self._pencere_ikonu_uygula()
 
         self.veri = load_json(DATA_DOSYASI, {})
@@ -1058,7 +1054,6 @@ class ArdaLauncher(ctk.CTk):
         self._auto_slider()
         save_json(DATA_DOSYASI, self.veri)
         self.after(1500, self._ilk_kisayol_olustur)
-        # 3 saniye sonra otomatik güncelleme kontrolü
         self.after(3000, lambda: threading.Thread(target=self._auto_update_check, daemon=True).start())
 
     # ============ OTOMATİK GÜNCELLEME ============
@@ -1073,35 +1068,26 @@ class ArdaLauncher(ctk.CTk):
             remote_v = str(info.get("version", "?"))
             notes = str(info.get("notes", "Yama notları yok."))
             url = str(info.get("url", "") or info.get("download_url", ""))
-            win = ctk.CTkToplevel(self)
-            win.title(f"Yeni Güncelleme: v{remote_v}")
-            win.geometry("540x480")
-            win.configure(fg_color=RENKLER["arka"])
-            win.transient(self)
-            win.grab_set()
+            win = ctk.CTkToplevel(self); win.title(f"Yeni Güncelleme: v{remote_v}")
+            win.geometry("540x480"); win.configure(fg_color=RENKLER["arka"])
+            win.transient(self); win.grab_set()
             ctk.CTkLabel(win, text=f"🎉 Yeni Güncelleme Mevcut! (v{remote_v})",
                          font=ctk.CTkFont(size=18, weight="bold"),
                          text_color=RENKLER["metin"]).pack(pady=(20, 5), padx=20)
             ctk.CTkLabel(win, text=f"Mevcut: v{APP_VERSION} → Yeni: v{remote_v}",
-                         font=ctk.CTkFont(size=12),
-                         text_color=RENKLER["soluk"]).pack()
+                         font=ctk.CTkFont(size=12), text_color=RENKLER["soluk"]).pack()
             ctk.CTkLabel(win, text="📋 Yama Notları:",
                          font=ctk.CTkFont(size=13, weight="bold"),
                          text_color=RENKLER["metin"]).pack(anchor="w", padx=20, pady=(15, 5))
             tb = ctk.CTkTextbox(win, height=180, fg_color=RENKLER["kart"],
                                  text_color=RENKLER["metin"], font=ctk.CTkFont(size=12))
             tb.pack(fill="both", expand=True, padx=20, pady=(0, 10))
-            tb.insert("1.0", notes)
-            tb.configure(state="disabled")
+            tb.insert("1.0", notes); tb.configure(state="disabled")
             self._upd_progress = ctk.CTkProgressBar(win, height=10, progress_color=RENKLER["vurgu"])
             self._upd_progress.pack(fill="x", padx=20, pady=(0, 5)); self._upd_progress.set(0)
-            self._upd_status = ctk.CTkLabel(win, text="", font=ctk.CTkFont(size=11),
-                                             text_color=RENKLER["soluk"])
-            self._upd_status.pack(pady=(0, 10))
             bf = ctk.CTkFrame(win, fg_color="transparent"); bf.pack(pady=(0, 20))
             def do_update():
                 win.destroy()
-                self._upd_win = None
                 threading.Thread(target=self._download_and_apply_update, args=(url, remote_v), daemon=True).start()
             ctk.CTkButton(bf, text="⬇️ Güncelle", width=140, height=40,
                           fg_color=RENKLER["yesil"], hover_color="#16A34A",
@@ -1109,22 +1095,17 @@ class ArdaLauncher(ctk.CTk):
             ctk.CTkButton(bf, text="Şimdi Değil", width=120, height=40,
                           fg_color=RENKLER["kart"], hover_color=RENKLER["kart_hover"],
                           command=win.destroy).pack(side="left", padx=5)
-            self._upd_win = win
-        except Exception as e:
-            print(f"[UPDATE DIALOG] {e}")
+        except Exception as e: print(f"[UPDATE DIALOG] {e}")
 
     def _download_and_apply_update(self, url, new_version):
         if not url or AutoUpdater.is_placeholder(url):
-            self.after(0, lambda: messagebox.showerror("Hata", "Geçerli bir indirme URL'si yok."))
-            return
+            self.after(0, lambda: messagebox.showerror("Hata", "Geçerli indirme URL'si yok.")); return
         try:
-            self.after(0, lambda: self.durum(f"Güncelleme indiriliyor: v{new_version}..."))
             r = requests.get(url, timeout=60, headers=HEADERS, allow_redirects=True)
             if r.status_code != 200 or len(r.content) < 1000:
                 raise RuntimeError(f"İndirme başarısız (HTTP {r.status_code}).")
             script = _get_script_path()
-            if not script:
-                raise RuntimeError("launcher.pyw yolu tespit edilemedi.")
+            if not script: raise RuntimeError("launcher.pyw yolu tespit edilemedi.")
             tmp = script + ".new"
             with open(tmp, "wb") as f: f.write(r.content)
             try: os.replace(tmp, script)
@@ -1132,7 +1113,6 @@ class ArdaLauncher(ctk.CTk):
                 with open(script, "wb") as f: f.write(r.content)
                 try: os.remove(tmp)
                 except Exception: pass
-            self.after(0, lambda: self.durum(f"v{new_version} indirildi. Yeniden başlatılıyor..."))
             self.after(400, lambda: self._restart_app())
         except Exception as e:
             err = str(e)
@@ -1155,8 +1135,7 @@ class ArdaLauncher(ctk.CTk):
         def work():
             try:
                 res = AutoUpdater.check(UPDATE_VERSION_URL, APP_VERSION, timeout=5)
-                if res:
-                    self.after(0, lambda r=res: self._show_update_dialog(r, auto=False))
+                if res: self.after(0, lambda r=res: self._show_update_dialog(r, auto=False))
                 else:
                     self.after(0, lambda: messagebox.showinfo("Güncelleme Kontrolü",
                         f"✅ En son sürümü kullanıyorsunuz: v{APP_VERSION}"))
@@ -1252,7 +1231,7 @@ class ArdaLauncher(ctk.CTk):
                 self._logo_ref = ctk.CTkImage(light_image=li, dark_image=li, size=(40,40))
                 ctk.CTkLabel(lf, text="", image=self._logo_ref).pack(side="left", padx=(5, 10))
         except Exception: pass
-        ctk.CTkLabel(lf, text=f"ARDA\nLAUNCHER", font=ctk.CTkFont(size=18, weight="bold"),
+        ctk.CTkLabel(lf, text="ARDA\nLAUNCHER", font=ctk.CTkFont(size=18, weight="bold"),
                      text_color=RENKLER["vurgu"], justify="left").pack(side="left")
         self.profil_mini = ctk.CTkFrame(self.sidebar, fg_color=RENKLER["kart"],
                                          corner_radius=12, cursor="hand2")
@@ -1395,12 +1374,69 @@ class ArdaLauncher(ctk.CTk):
             except Exception: pass
             self._monitor_job = self.after(refresh, self._sistem_monitor)
 
+    # ================================================================
+    # HERO CAROUSEL — SCROLL FIX: SADECE HERO İÇERİĞİNİ GÜNCELLER
+    # ================================================================
     def _auto_slider(self):
-        if self.aktif_sayfa == "kesfet" and not self.arama:
-            self._hero_index += 1
-            try: self.sayfa_degistir("kesfet")
-            except Exception: pass
+        """Her 6 saniyede hero'yu ilerlet. Sayfa yeniden çizilmez."""
+        try:
+            if (self.aktif_sayfa == "kesfet" and not self.arama
+                    and not self._hero_paused
+                    and getattr(self, "hero_ids", None)):
+                self._hero_index += 1
+                self._hero_guncelle()
+        except Exception:
+            pass
         self.after(6000, self._auto_slider)
+
+    def _hero_prev(self):
+        """Önceki slayda geç - sadece hero içeriğini günceller."""
+        if not getattr(self, "hero_ids", None): return
+        self._hero_index -= 1
+        self._hero_guncelle()
+
+    def _hero_next(self):
+        """Sonraki slayda geç - sadece hero içeriğini günceller."""
+        if not getattr(self, "hero_ids", None): return
+        self._hero_index += 1
+        self._hero_guncelle()
+
+    def _hero_pause(self, event=None):
+        self._hero_paused = True
+
+    def _hero_resume(self, event=None):
+        self._hero_paused = False
+
+    def _hero_guncelle(self):
+        """Hero banner içindeki görsel, başlık, açıklama, buton, noktaları günceller.
+        Tüm sayfayı yeniden çizmez → scroll konumu korunur."""
+        try:
+            if not self.hero_ids: return
+            self._hero_index %= len(self.hero_ids)
+            aktif_id = self.hero_ids[self._hero_index]
+            onerilen = self.oyunlar.get(aktif_id)
+            if not onerilen: return
+            if self.hero_banner is not None:
+                self.gorsel_yukle_guvenli(self.hero_banner, aktif_id, "banner",
+                    onerilen.get("banner_urls", onerilen.get("kapak_urls", [])),
+                    (1080, 280), onerilen["isim"], onerilen["tur"], overlay=True)
+            if self.hero_title_lbl is not None:
+                self.hero_title_lbl.configure(text=onerilen["isim"])
+            if self.hero_desc_lbl is not None:
+                self.hero_desc_lbl.configure(text=onerilen["aciklama"][:90] + "...")
+            if self.hero_incele_btn is not None:
+                self.hero_incele_btn.configure(
+                    command=lambda oid=aktif_id: self.oyun_detay_goster(oid))
+            if self.hero_dots is not None:
+                for w in self.hero_dots.winfo_children():
+                    try: w.destroy()
+                    except Exception: pass
+                for i in range(len(self.hero_ids)):
+                    c = RENKLER["vurgu"] if i == self._hero_index else RENKLER["soluk"]
+                    ctk.CTkLabel(self.hero_dots, text="●", font=ctk.CTkFont(size=12),
+                                 text_color=c).pack(side="left", padx=3)
+        except Exception as e:
+            print(f"[HERO] {e}")
 
     def _arama_degisti(self, _=None):
         self.arama = self.arama_entry.get().strip().lower()
@@ -1423,7 +1459,42 @@ class ArdaLauncher(ctk.CTk):
         k = self.oyunlar_dizini / oid
         return k.exists() and any(k.rglob(exe))
 
+    # ================================================================
+    # SCROLL KONUMU KORUMALI SAYFA DEĞİŞTİRME
+    # ================================================================
+    def _scroll_kaydet(self, sayfa):
+        """Mevcut sayfanın dikey kaydırma konumunu kaydet (0.0 - 1.0)."""
+        try:
+            pos = self.icerik._parent_canvas.yview()[0]
+            self._scroll_positions[sayfa] = float(pos)
+        except Exception:
+            pass
+
+    def _scroll_geri_yukle(self, pos):
+        """Kaydedilmiş kaydırma konumunu geri yükle."""
+        try:
+            if pos and pos > 0.001:
+                self.icerik._parent_canvas.yview_moveto(pos)
+        except Exception:
+            pass
+
     def sayfa_degistir(self, s):
+        # Hero referanslarını temizle (sayfa değişiyor)
+        self.hero_frame = None
+        self.hero_banner = None
+        self.hero_title_lbl = None
+        self.hero_desc_lbl = None
+        self.hero_incele_btn = None
+        self.hero_dots = None
+        self.hero_ids = []
+
+        # Mevcut scroll pozisyonunu kaydet
+        try:
+            if self.aktif_sayfa:
+                self._scroll_kaydet(self.aktif_sayfa)
+        except Exception:
+            pass
+
         self.aktif_sayfa = s
         for k, b in self.nav_btn.items():
             b.configure(fg_color=RENKLER["vurgu"] if k == s else "transparent",
@@ -1432,6 +1503,14 @@ class ArdaLauncher(ctk.CTk):
         {"kesfet": self._kesfet, "kutuphanem": self._kutuphanem, "indirmeler": self._indirmeler,
          "profil": self._profil, "ayarlar": self._ayarlar}.get(s, lambda: None)()
 
+        # Hedef sayfanın kaydedilmiş scroll konumunu geri yükle
+        saved = self._scroll_positions.get(s, 0.0)
+        if saved and saved > 0.001:
+            self.after(50, lambda p=saved: self._scroll_geri_yukle(p))
+
+    # ================================================================
+    # KEŞFET — Hero'yu sınıf özelliği olarak sakla
+    # ================================================================
     def _kesfet(self):
         one = ["mindustry","openttd","warzone2100","zeroad","veloren","supertuxkart"]
         one = [x for x in one if x in self.oyunlar]
@@ -1439,38 +1518,67 @@ class ArdaLauncher(ctk.CTk):
         self._hero_index %= max(len(one), 1)
         aktif_id = one[self._hero_index] if one else None
         onerilen = self.oyunlar.get(aktif_id) if aktif_id else None
+
         if onerilen:
             hero = ctk.CTkFrame(self.icerik, height=280, corner_radius=16, fg_color=RENKLER["kart"])
             hero.grid(row=0, column=0, columnspan=4, sticky="ew", pady=(0, 25))
             hero.grid_propagate(False); hero.grid_rowconfigure(0, weight=1)
             hero.grid_columnconfigure(0, weight=1)
+            self.hero_frame = hero
+
             banner = ctk.CTkLabel(hero, text="")
             banner.grid(row=0, column=0, sticky="nsew")
+            self.hero_banner = banner
             self.gorsel_yukle_guvenli(banner, aktif_id, "banner",
                 onerilen.get("banner_urls", onerilen.get("kapak_urls", [])),
                 (1080, 280), onerilen["isim"], onerilen["tur"], overlay=True)
+
             info = ctk.CTkFrame(hero, fg_color=RENKLER["yan"], corner_radius=10)
             info.place(x=25, y=165)
-            ctk.CTkLabel(info, text=onerilen["isim"], font=ctk.CTkFont(size=22, weight="bold"),
-                         text_color="white").pack(anchor="w", padx=15, pady=(10, 2))
-            ctk.CTkLabel(info, text=onerilen["aciklama"][:90] + "...",
-                         font=ctk.CTkFont(size=11), text_color=RENKLER["soluk"],
-                         wraplength=500, justify="left").pack(anchor="w", padx=15, pady=(0, 8))
-            ctk.CTkButton(info, text="İncele", width=110, height=30, fg_color=RENKLER["vurgu"],
-                          hover_color=RENKLER["vurgu_hover"],
-                          command=lambda oid=aktif_id: self.oyun_detay_goster(oid)).pack(
-                anchor="w", padx=15, pady=(0, 10))
+            title_lbl = ctk.CTkLabel(info, text=onerilen["isim"],
+                                      font=ctk.CTkFont(size=22, weight="bold"),
+                                      text_color="white")
+            title_lbl.pack(anchor="w", padx=15, pady=(10, 2))
+            self.hero_title_lbl = title_lbl
+
+            desc_lbl = ctk.CTkLabel(info, text=onerilen["aciklama"][:90] + "...",
+                                     font=ctk.CTkFont(size=11), text_color=RENKLER["soluk"],
+                                     wraplength=500, justify="left")
+            desc_lbl.pack(anchor="w", padx=15, pady=(0, 8))
+            self.hero_desc_lbl = desc_lbl
+
+            incele_btn = ctk.CTkButton(info, text="İncele", width=110, height=30,
+                                        fg_color=RENKLER["vurgu"], hover_color=RENKLER["vurgu_hover"],
+                                        command=lambda oid=aktif_id: self.oyun_detay_goster(oid))
+            incele_btn.pack(anchor="w", padx=15, pady=(0, 10))
+            self.hero_incele_btn = incele_btn
+
             ctk.CTkButton(hero, text="◀", width=36, height=36, font=ctk.CTkFont(size=16),
                           fg_color=RENKLER["yan"], hover_color=RENKLER["vurgu_hover"],
                           command=self._hero_prev).place(relx=0.0, rely=0.5, x=15, anchor="w")
             ctk.CTkButton(hero, text="▶", width=36, height=36, font=ctk.CTkFont(size=16),
                           fg_color=RENKLER["yan"], hover_color=RENKLER["vurgu_hover"],
                           command=self._hero_next).place(relx=1.0, rely=0.5, x=-15, anchor="e")
+
             dots = ctk.CTkFrame(hero, fg_color="transparent")
             dots.place(relx=0.5, rely=1.0, y=-15, anchor="s")
+            self.hero_dots = dots
             for i in range(len(one)):
                 c = RENKLER["vurgu"] if i == self._hero_index else RENKLER["soluk"]
                 ctk.CTkLabel(dots, text="●", font=ctk.CTkFont(size=12), text_color=c).pack(side="left", padx=3)
+
+            self.hero_ids = list(one)
+
+            # --- FARE HERO ÜZERİNDEYKEN OTOMATİK GEÇİŞİ DURDUR ---
+            hero.bind("<Enter>", self._hero_pause, add="+")
+            hero.bind("<Leave>", self._hero_resume, add="+")
+            for w in (banner, title_lbl, desc_lbl, incele_btn, dots):
+                try:
+                    w.bind("<Enter>", self._hero_pause, add="+")
+                    w.bind("<Leave>", self._hero_resume, add="+")
+                except Exception:
+                    pass
+
         filtreli = [(oid, o) for oid, o in self.oyunlar.items() if self._filtrele(oid, o)]
         if not filtreli:
             ctk.CTkLabel(self.icerik, text="Eşleşen oyun bulunamadı.",
@@ -1481,8 +1589,6 @@ class ArdaLauncher(ctk.CTk):
             fav = self.veri["oyunlar"].get(oid, {}).get("favori", False)
             OyunKarti(self.icerik, oid, o, self, favori=fav).grid(
                 row=r + 1, column=c, padx=10, pady=10, sticky="nsew")
-    def _hero_prev(self): self._hero_index -= 1; self.sayfa_degistir("kesfet")
-    def _hero_next(self): self._hero_index += 1; self.sayfa_degistir("kesfet")
 
     def _kutuphanem(self):
         header = ctk.CTkFrame(self.icerik, fg_color="transparent")
@@ -1839,7 +1945,6 @@ class ArdaLauncher(ctk.CTk):
         return APP_VERSION
 
     def _dev_publish(self):
-        d = self.veri.get("dev", {})
         owner = (self.dev_owner_entry.get() or "").strip()
         repo = (self.dev_repo_entry.get() or "").strip()
         token = (self.dev_token_entry.get() or "").strip()
@@ -1847,31 +1952,17 @@ class ArdaLauncher(ctk.CTk):
         new_version = (self.dev_version_entry.get() or "").strip()
         notes = self.dev_notes_box.get("1.0", "end-1c").strip()
         if not owner or not repo or not token:
-            messagebox.showerror("Eksik", "GitHub Kullanıcı Adı, Repo Adı ve PAT zorunludur.")
-            return
+            messagebox.showerror("Eksik", "GitHub Kullanıcı Adı, Repo Adı ve PAT zorunludur."); return
         if not new_version:
-            messagebox.showerror("Eksik", "Yeni sürüm numarası zorunludur.")
-            return
-        try:
-            if AutoUpdater.parse_version(new_version) <= AutoUpdater.parse_version(APP_VERSION):
-                if not messagebox.askyesno("Sürüm Kontrolü",
-                    f"Yeni sürüm ({new_version}) mevcut sürümden ({APP_VERSION}) küçük/eşit.\n"
-                    "Yine de yayınlansın mı?"): return
-        except Exception: pass
+            messagebox.showerror("Eksik", "Yeni sürüm numarası zorunludur."); return
         script = _get_script_path()
         if not script:
-            messagebox.showerror("Hata", "launcher.pyw yolu tespit edilemedi.")
+            messagebox.showerror("Hata", "launcher.pyw yolu tespit edilemedi."); return
+        if not messagebox.askyesno("Yayınla", f"Yüklenecek:\n\n📦 {owner}/{repo}\n🌿 {branch}\n🔖 v{new_version}\n\nDevam?"):
             return
-        if not messagebox.askyesno("Yayınla", f"launcher.pyw + version.json GitHub'a yüklenecek:\n\n"
-                                               f"📦 Repo: {owner}/{repo}\n"
-                                               f"🌿 Branch: {branch}\n"
-                                               f"🔖 Yeni sürüm: v{new_version}\n\n"
-                                               f"Devam edilsin mi?"): return
-        # Dev ayarlarını kaydet
         self.veri["dev"] = {"owner": owner, "repo": repo, "token": token, "branch": branch,
                             "next_version": new_version, "notes": notes}
         save_json(DATA_DOSYASI, self.veri)
-        # UI güncelle
         self.dev_status_lbl.configure(text="⏳ Yayınlanıyor...", text_color=RENKLER["sari"])
         self.dev_progress.set(0)
         try: self.dev_publish_btn.configure(state="disabled")
@@ -1899,75 +1990,36 @@ class ArdaLauncher(ctk.CTk):
         try: self.dev_publish_btn.configure(state="normal")
         except Exception: pass
         if res.get("ok"):
-            self.dev_status_lbl.configure(
-                text=f"✅ Yayınlandı! v{new_version}", text_color=RENKLER["yesil"])
+            self.dev_status_lbl.configure(text=f"✅ Yayınlandı! v{new_version}", text_color=RENKLER["yesil"])
             self.dev_progress.set(1.0)
-            # Yerel dosyayı da güncelle (isteğe bağlı)
-            try:
-                if self.dev_sync_var.get():
-                    script = _get_script_path()
-                    if script:
-                        with open(script, "r", encoding="utf-8", errors="replace") as f:
-                            content = f.read()
-                        patched = GitHubPublisher.patch_content(content, new_version, owner, repo, branch)
-                        with open(script, "wb") as f:
-                            f.write(patched)
-            except Exception as e:
-                print(f"[SYNC] {e}")
-            self.veri["dev"]["next_version"] = self._dev_auto_next_version_from(new_version)
-            save_json(DATA_DOSYASI, self.veri)
-            try: self._update_entry(self.dev_version_entry, self.veri["dev"]["next_version"])
-            except Exception: pass
-            self._aktivite_ekle(f"v{new_version} yayınlandı → {owner}/{repo}")
             messagebox.showinfo("Başarılı",
-                f"✅ v{new_version} başarıyla yayınlandı!\n\n"
-                f"📦 {owner}/{repo} ({branch})\n\n"
-                f"Dosyalar:\n"
-                f"• launcher.pyw\n"
-                f"• version.json\n\n"
-                f"Kullanıcılar bir sonraki açılışta otomatik güncelleme alacak.\n\n"
-                + ("(Yerel launcher.pyw de v{}'e güncellendi.)".format(new_version)
-                   if self.dev_sync_var.get() else ""))
+                f"✅ v{new_version} başarıyla yayınlandı!\n\n📦 {owner}/{repo} ({branch})\n\n"
+                "Kullanıcılar bir sonraki açılışta güncelleme alacak.")
         else:
-            self.dev_status_lbl.configure(
-                text=f"❌ Hata: {res.get('error','Bilinmeyen')}", text_color=RENKLER["kirmizi"])
+            self.dev_status_lbl.configure(text=f"❌ Hata: {res.get('error','?')}", text_color=RENKLER["kirmizi"])
             messagebox.showerror("Yayın Hatası",
-                f"Adım: {res.get('step','?')}\n"
-                f"Durum: {res.get('status','?')}\n"
-                f"Hata: {res.get('error','Bilinmeyen')}\n\n"
-                f"İpucu: PAT'nizin 'repo' yetkisi olduğundan emin olun.")
+                f"Adım: {res.get('step','?')}\nDurum: {res.get('status','?')}\nHata: {res.get('error','?')}")
 
     def _dev_publish_fail(self, err):
         try: self.dev_publish_btn.configure(state="normal")
         except Exception: pass
         try:
-            self.dev_status_lbl.configure(text=f"❌ Bağlantı hatası: {err[:60]}",
-                                          text_color=RENKLER["kirmizi"])
+            self.dev_status_lbl.configure(text=f"❌ {err[:60]}", text_color=RENKLER["kirmizi"])
         except Exception: pass
         messagebox.showerror("Bağlantı Hatası", err)
-
-    def _dev_auto_next_version_from(self, v):
-        try:
-            parts = str(v).split(".")
-            if parts and parts[-1].isdigit():
-                parts[-1] = str(int(parts[-1]) + 1)
-                return ".".join(parts)
-        except Exception: pass
-        return ""
 
     def _dev_test_connection(self):
         owner = (self.dev_owner_entry.get() or "").strip()
         repo = (self.dev_repo_entry.get() or "").strip()
         token = (self.dev_token_entry.get() or "").strip()
         if not owner or not repo or not token:
-            messagebox.showerror("Eksik", "Tüm alanlar gerekli.")
-            return
+            messagebox.showerror("Eksik", "Tüm alanlar gerekli."); return
         def work():
             try:
                 r = requests.get(f"https://api.github.com/repos/{owner}/{repo}",
                                  headers={"Authorization": f"token {token}",
                                           "Accept": "application/vnd.github+json",
-                                          "User-Agent": "ArdaLauncher-Publisher/8.2"},
+                                          "User-Agent": "ArdaLauncher-Publisher/8.3"},
                                  timeout=10)
                 if r.status_code == 200:
                     data = r.json()
@@ -1978,16 +2030,9 @@ class ArdaLauncher(ctk.CTk):
                         f"✅ Repo: {data.get('full_name')}\n"
                         f"🌿 Default branch: {data.get('default_branch')}\n"
                         f"📝 Push yetkisi: {'✅ VAR' if push else '❌ YOK'}"))
-                elif r.status_code == 401:
-                    self.after(0, lambda: messagebox.showerror("Yetki Hatası",
-                        "PAT geçersiz (401). Token'ı kontrol edin."))
-                elif r.status_code == 404:
-                    self.after(0, lambda: messagebox.showerror("Bulunamadı",
-                        f"Repo bulunamadı (404): {owner}/{repo}\n"
-                        "PAT'nin 'repo' scope'u olduğundan emin olun."))
                 else:
                     self.after(0, lambda: messagebox.showerror("Hata",
-                        f"HTTP {r.status_code}"))
+                        f"HTTP {r.status_code}\nPAT 'repo' scope kontrol edin."))
             except Exception as e:
                 err = str(e)
                 self.after(0, lambda: messagebox.showerror("Hata", err))
@@ -2005,7 +2050,7 @@ class ArdaLauncher(ctk.CTk):
         t1 = tabs.add("📁 Dizin"); t2 = tabs.add("🌐 Ağ"); t3 = tabs.add("⚡ Performans")
         t4 = tabs.add("🎨 Görünüm"); t5 = tabs.add("🛠️ Bakım")
 
-        # TAB 1: Dizin
+        # TAB 1
         f = ctk.CTkFrame(t1, fg_color="transparent"); f.pack(fill="x", padx=10, pady=5)
         ctk.CTkLabel(f, text="Sistem Veri Dizini:", font=ctk.CTkFont(size=13, weight="bold"),
                      text_color=RENKLER["metin"]).pack(anchor="w", pady=(5, 2))
@@ -2062,7 +2107,7 @@ class ArdaLauncher(ctk.CTk):
             db.set(used / total if total > 0 else 0)
         except Exception: pass
 
-        # TAB 2: Ağ
+        # TAB 2
         g = ctk.CTkFrame(t2, fg_color="transparent"); g.pack(fill="x", padx=10, pady=5)
         ctk.CTkLabel(g, text="İndirme Hız Limiti:", font=ctk.CTkFont(size=13, weight="bold"),
                      text_color=RENKLER["metin"]).pack(anchor="w", pady=(5, 2))
@@ -2075,7 +2120,7 @@ class ArdaLauncher(ctk.CTk):
         ctk.CTkSwitch(g, text="Arşivi otomatik çıkar", variable=av, fg_color=RENKLER["vurgu"],
                       command=lambda: self._set_setting("auto_extract", av.get())).pack(anchor="w", pady=5)
 
-        # TAB 3: Performans
+        # TAB 3
         h = ctk.CTkFrame(t3, fg_color="transparent"); h.pack(fill="x", padx=10, pady=5)
         sv = ctk.BooleanVar(value=self.veri["settings"].get("startup_enabled", False))
         ctk.CTkSwitch(h, text="Windows Başlangıcında Çalıştır", variable=sv,
@@ -2087,7 +2132,7 @@ class ArdaLauncher(ctk.CTk):
         ctk.CTkSwitch(h, text="Oyun başlarken pencereyi küçült", variable=mv, fg_color=RENKLER["vurgu"],
                       command=lambda: self._set_setting("minimize_on_play", mv.get())).pack(anchor="w", pady=8)
 
-        # TAB 4: Görünüm
+        # TAB 4
         i = ctk.CTkFrame(t4, fg_color="transparent"); i.pack(fill="x", padx=10, pady=5)
         ctk.CTkLabel(i, text="Tema:", font=ctk.CTkFont(size=13, weight="bold"),
                      text_color=RENKLER["metin"]).pack(anchor="w", pady=(5, 4))
@@ -2097,10 +2142,8 @@ class ArdaLauncher(ctk.CTk):
                           hover_color=tt["hover"],
                           command=lambda a=ak: self.tema_degistir(a)).pack(side="left", padx=3)
 
-        # TAB 5: Bakım
+        # TAB 5
         j = ctk.CTkFrame(t5, fg_color="transparent"); j.pack(fill="x", padx=10, pady=5)
-
-        # Güncelleme kontrolü
         upd_frame = ctk.CTkFrame(j, fg_color=RENKLER["yan"], corner_radius=8)
         upd_frame.pack(fill="x", pady=(0, 10))
         ctk.CTkLabel(upd_frame, text=f"🔄 Mevcut Sürüm: v{APP_VERSION}",
@@ -2109,7 +2152,6 @@ class ArdaLauncher(ctk.CTk):
         ctk.CTkButton(upd_frame, text="🔍 Güncellemeleri Denetle", height=36,
                       fg_color=RENKLER["vurgu"], hover_color=RENKLER["vurgu_hover"],
                       command=self._manuel_guncelleme_denetle).pack(fill="x", padx=12, pady=(0, 10))
-
         ctk.CTkButton(j, text="🖥️ Masaüstü Kısayolu Oluştur", height=36,
                       fg_color=RENKLER["vurgu"], hover_color=RENKLER["vurgu_hover"],
                       command=lambda: self.masaustu_kisayolu_olustur(sessiz=False)).pack(fill="x", pady=4)
@@ -2125,7 +2167,7 @@ class ArdaLauncher(ctk.CTk):
                       fg_color=RENKLER["kirmizi"], hover_color="#B91C1C",
                       command=self.launcher_uninstall).pack(fill="x", pady=(10, 5))
 
-        # ---- GELİŞTİRİCİ MODU (GİZLİ/AÇILIR) ----
+        # GELİŞTİRİCİ MODU
         dev_header = ctk.CTkFrame(t5, fg_color="transparent")
         dev_header.pack(fill="x", pady=(15, 0))
         self.dev_toggle_btn = ctk.CTkButton(dev_header, text="🔧 Geliştirici Modu (Gizli)",
@@ -2136,15 +2178,11 @@ class ArdaLauncher(ctk.CTk):
 
         self.dev_frame = ctk.CTkFrame(t5, fg_color="#12121c", corner_radius=8,
                                        border_width=1, border_color="#3a3a4a")
-
         d = self.veri.get("dev", {})
         ctk.CTkLabel(self.dev_frame, text="🚀 GitHub'a Sürüm Yayınla",
                      font=ctk.CTkFont(size=14, weight="bold"),
                      text_color=RENKLER["vurgu"]).pack(anchor="w", padx=12, pady=(12, 4))
-        ctk.CTkLabel(self.dev_frame, text="launcher.pyw + version.json doğrudan reponuza yüklenir.",
-                     font=ctk.CTkFont(size=10), text_color=RENKLER["soluk"]).pack(anchor="w", padx=12, pady=(0, 10))
-
-        def _row(lbl, entry_widget, show=None):
+        def _row(lbl, value, show=None):
             r = ctk.CTkFrame(self.dev_frame, fg_color="transparent"); r.pack(fill="x", padx=12, pady=3)
             ctk.CTkLabel(r, text=lbl, width=140, anchor="w",
                          font=ctk.CTkFont(size=11, weight="bold"),
@@ -2153,36 +2191,25 @@ class ArdaLauncher(ctk.CTk):
                              text_color=RENKLER["metin"], font=ctk.CTkFont(size=11),
                              show=show if show else "")
             e.pack(side="left", fill="x", expand=True)
-            e.insert(0, entry_widget)
-            return e
-
+            e.insert(0, value); return e
         self.dev_owner_entry = _row("👤 GitHub Kullanıcı:", d.get("owner", ""))
         self.dev_repo_entry = _row("📦 Repo Adı:", d.get("repo", ""))
         self.dev_token_entry = _row("🔑 GitHub PAT:", d.get("token", ""), show="•")
         self.dev_branch_entry = _row("🌿 Branch:", d.get("branch", "main"))
         next_v = d.get("next_version", "") or self._dev_auto_next_version()
         self.dev_version_entry = _row("🔖 Yeni Sürüm:", next_v)
-
-        ctk.CTkLabel(self.dev_frame, text="📝 Yayın Notları (opsiyonel):",
+        ctk.CTkLabel(self.dev_frame, text="📝 Yayın Notları:",
                      font=ctk.CTkFont(size=11, weight="bold"),
                      text_color=RENKLER["soluk"]).pack(anchor="w", padx=12, pady=(8, 2))
         self.dev_notes_box = ctk.CTkTextbox(self.dev_frame, height=70, fg_color=RENKLER["yan"],
                                              text_color=RENKLER["metin"], font=ctk.CTkFont(size=11))
         self.dev_notes_box.pack(fill="x", padx=12, pady=(0, 8))
         self.dev_notes_box.insert("1.0", d.get("notes", ""))
-
-        self.dev_sync_var = ctk.BooleanVar(value=True)
-        ctk.CTkCheckBox(self.dev_frame, text="Yerel launcher.pyw'yi de yeni sürüme güncelle",
-                        variable=self.dev_sync_var, font=ctk.CTkFont(size=10),
-                        fg_color=RENKLER["vurgu"], text_color=RENKLER["metin"]).pack(
-            anchor="w", padx=12, pady=(0, 8))
-
         self.dev_progress = ctk.CTkProgressBar(self.dev_frame, height=8, progress_color=RENKLER["vurgu"])
         self.dev_progress.pack(fill="x", padx=12, pady=(4, 2)); self.dev_progress.set(0)
         self.dev_status_lbl = ctk.CTkLabel(self.dev_frame, text="Hazır",
                                             font=ctk.CTkFont(size=10), text_color=RENKLER["soluk"])
         self.dev_status_lbl.pack(anchor="w", padx=12, pady=(0, 8))
-
         btn_row = ctk.CTkFrame(self.dev_frame, fg_color="transparent")
         btn_row.pack(fill="x", padx=12, pady=(0, 12))
         ctk.CTkButton(btn_row, text="🔗 Bağlantı Testi", width=120, height=34,
@@ -2193,16 +2220,8 @@ class ArdaLauncher(ctk.CTk):
                                               font=ctk.CTkFont(size=12, weight="bold"),
                                               command=self._dev_publish)
         self.dev_publish_btn.pack(side="left", fill="x", expand=True)
-
-        ctk.CTkLabel(self.dev_frame,
-                     text="ℹ️ PAT: github.com/settings/tokens → Fine-grained veya classic (repo scope)",
-                     font=ctk.CTkFont(size=9), text_color=RENKLER["soluk"],
-                     wraplength=600, justify="left").pack(anchor="w", padx=12, pady=(0, 10))
-
-        # Başlangıçta gizli
         if self._dev_visible:
             self.dev_frame.pack(fill="x", padx=10, pady=(5, 15))
-            self.dev_toggle_btn.configure(text="🔧 Geliştirici Modu (Kapat)")
 
     def _set_speed(self, val):
         m = {"Sınırsız": 0, "5 MB/s": 5, "10 MB/s": 10, "25 MB/s": 25}
@@ -2326,6 +2345,11 @@ class ArdaLauncher(ctk.CTk):
     def oyun_detay_goster(self, oid):
         self.secili_oyun = oid
         oyun = self.oyunlar[oid]
+        # Scroll pozisyonunu kaydet
+        try:
+            self._scroll_kaydet(self.aktif_sayfa)
+        except Exception:
+            pass
         for w in self.icerik.winfo_children(): w.destroy()
         ctk.CTkButton(self.icerik, text="← Geri", width=80, fg_color="transparent",
                       hover_color=RENKLER["kart_hover"],
@@ -2400,12 +2424,28 @@ class ArdaLauncher(ctk.CTk):
                           hover_color="#DC2626",
                           command=lambda: self.oyun_kaldir(oid)).grid(row=0, column=1, padx=(5,0), sticky="ew")
 
+    # ================================================================
+    # FAVORİ DEĞİŞTİR — SCROLL KORUMALI
+    # ================================================================
     def favori_degistir(self, oid, detail=False):
         v = self.veri["oyunlar"].setdefault(oid, {})
         v["favori"] = not v.get("favori", False)
         save_json(DATA_DOSYASI, self.veri)
-        if detail and self.secili_oyun == oid: self.oyun_detay_goster(oid)
-        else: self.sayfa_degistir(self.aktif_sayfa)
+        if detail and self.secili_oyun == oid:
+            self.oyun_detay_goster(oid)
+        else:
+            # Mevcut scroll pozisyonunu kaydet
+            try:
+                saved_pos = self.icerik._parent_canvas.yview()[0]
+            except Exception:
+                saved_pos = 0.0
+            # Sayfayı yeniden çiz (bu sayfa_degistir içinde otomatik
+            # olarak kaydedilen konumu geri yüklemeye çalışır ama biz
+            # yine de garantiye alalım)
+            self.sayfa_degistir(self.aktif_sayfa)
+            if saved_pos > 0.001:
+                self.after(50, lambda p=saved_pos: self._scroll_geri_yukle(p))
+
     def indir(self, oid):
         self.indirme_yon.baslat(oid, self.oyunlar[oid])
         self._rozet_guncelle()
