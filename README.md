@@ -40,8 +40,7 @@ You do **not** need to install Python or any dependencies manually. The automate
    - Check for Python 3.12+ (and install it silently via Windows `winget` if missing).
    - Install all required libraries (`customtkinter`, `requests`, `pillow`, `psutil`, `py7zr`).
    - Download the latest **`launcher.pyw`** into `%LOCALAPPDATA%\ArdaLauncher`.
-   - Launch **ARDA LAUNCHER** and create a custom neon **Desktop Shortcut**.
-
+  
 ---
 
 ## 🛠️ Manual Installation (For Advanced Users)
