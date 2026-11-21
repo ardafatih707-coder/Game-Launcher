@@ -1,7 +1,7 @@
 <div align="center">
-  <h1>🚀 ArdaLauncher</h1>
+  <h1>🚀 ARDA LAUNCHER v12.4</h1>
   <p>
-    <strong>A fast, lightweight, and auto-installing game launcher built with Python.</strong>
+    <strong>A modern, lightweight, and multi-language game launcher built with Python & CustomTkinter.</strong>
   </p>
 </div>
 
@@ -9,48 +9,55 @@
 
 ## 📖 About
 
-**ArdaLauncher** is a lightweight and user-friendly game launcher developed with Python (`.pyw`) to help you easily manage and launch your games from a single hub. With its one-click installer script and version tracking system, it ensures your setup stays clean and up to date.
+**ARDA LAUNCHER v12.4** is a sleek Windows desktop game hub designed to discover, download, and manage **115+ free-to-play and open-source games** from a single interface. Featuring direct GitHub release downloads with resume support, Steam library integration, daily rewards, and a zero-setup one-click Windows installer, it delivers a complete launcher experience without heavy background bloat.
 
-## ✨ Features
+---
 
-* ⚡ **One-Click Auto Installation:** Effortlessly set up required dependencies using `ArdaLauncherInstaller.bat`.
-* 🔄 **Smart Version Tracking:** Automatically monitors updates via the `version.json` configuration.
-* 🖥️ **Console-Free Execution:** Runs with the `.pyw` extension so the interface opens directly without a background command prompt window.
-* 🎮 **Fast & Lightweight:** Provides instant access to your games without draining system resources.
+## ✨ Key Features
 
-## 📂 File Structure
+* 🎮 **115+ Free Games Catalog:** Browse open-source GitHub releases, free-to-play Steam titles, and standalone web games in one place.
+* ⬇️ **Smart Download Manager:** Multi-threaded HTTPS downloads from GitHub Releases with pause, resume (`Range` requests), cancel, and real-time speed tracking.
+* 🔗 **Steam Integration:** Automatically detects your local Steam installation, checks installed games, and triggers one-click Steam installs (`steam://install/`).
+* 🌍 **12 Languages Supported:** Auto-detects system language with full UI support for English, Türkçe, Deutsch, Français, Español, Italiano, Português, Русский, 中文, 日本語, 한국어, and العربية.
+* 🎡 **Gamification & Cosmetic Shop:** Spin the Daily Wheel, complete daily tasks, earn 💎 credits, and unlock profile banners.
+* ⚡ **Built-in Utilities:** Includes a safe Game Booster, Windows startup toggle, desktop shortcut generator, JSON data backup/restore, and SHA-256 verified auto-updates.
+* 🛠️ **Developer Console:** Built-in authenticated developer workspace with Windows DPAPI token encryption for managing repository files and atomic branch syncing.
 
-* `ArdaLauncher.pyw` – Main launcher interface and executable script.
-* `ArdaLauncherInstaller.bat` – Windows batch script that automatically installs dependencies and sets up the environment.
-* `version.json` – Configuration file storing current version metadata.
-* `GITHUB_RELEASE_NOTES_EN.txt` – Release notes and changelog.
+---
 
-## 📥 Installation & Usage
+## 📥 Quick Installation (All-in-One)
 
-### 1. Quick Setup (Recommended)
-1. Download or clone this repository:
-   ```bash
-   git clone https://github.com
-   ```
-2. Double-click **`ArdaLauncherInstaller.bat`** inside the folder to run the setup.
-3. Once completed, launch **`ArdaLauncher.pyw`** to start the application.
+You don't need to install Python or any dependencies manually. The installer script handles everything automatically:
 
-### 2. Manual Run
-If you already have Python installed, you can start it directly via terminal:
-```bash
-cd Game-Launcher
-pythonw ArdaLauncher.pyw
-```
+1. Download **`ArdaLauncherInstaller.bat`** from this repository.
+2. Double-click **`ArdaLauncherInstaller.bat`**.
+3. The installer will automatically:
+   * Check for **Python 3.10+** and install **Python 3.13** silently if it is missing.
+   * Install all required packages (`customtkinter`, `Pillow`, `requests`, `psutil`).
+   * Download the latest `ArdaLauncher.pyw` into `%LOCALAPPDATA%\ArdaLauncher` and verify its **SHA-256** checksum.
+   * Launch **ARDA LAUNCHER** automatically when finished.
 
-## 💻 Requirements
+> 💡 **Tip:** You can also run `ArdaLauncherInstaller.bat` anytime to update your existing installation to the latest version.
 
-* **Operating System:** Windows 10 / 11
-* **Software:** Python 3.8 or higher *(The installer script handles missing dependencies)*
+---
 
-## 📝 Release Notes
+## 📂 Repository Structure
 
-Check out [`GITHUB_RELEASE_NOTES_EN.txt`](GITHUB_RELEASE_NOTES_EN.txt) in this repository or visit the [Releases](https://github.com) page for the latest updates and changes.
+* `ArdaLauncherInstaller.bat` – All-in-one automatic Windows installer and updater.
+* `ArdaLauncher.pyw` – Main console-free GUI application.
+* `version.json` – Release metadata and SHA-256 verification hash.
+* `GITHUB_RELEASE_NOTES_EN.txt` – Version changelog and release details.
 
-## 🤝 Contributing
+---
 
-Feel free to open an [Issue](https://github.com) for bug reports and feature requests, or submit a Pull Request.
+## 💻 System Requirements
+
+* **OS:** Windows 10 / Windows 11 (64-bit)
+* **Internet Connection:** Required for automatic setup, game downloads, and updates
+
+---
+
+## 📝 Release Notes & Feedback
+
+* Check [`GITHUB_RELEASE_NOTES_EN.txt`](GITHUB_RELEASE_NOTES_EN.txt) for full version history.
+* Found a bug or have a suggestion? Open an [Issue](https://github.com) or use the in-app **Report / Suggest** button.
