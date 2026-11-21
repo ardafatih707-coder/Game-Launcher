@@ -1,7 +1,7 @@
-@echo off
+﻿@echo off
 setlocal EnableExtensions
 chcp 65001 >nul
-title ARDA LAUNCHER V12.1 - Installer and Updater
+title ARDA LAUNCHER V12.2 - Installer and Updater
 
 rem ============================================================
 rem ARDA LAUNCHER - Automatic Windows installer and updater
@@ -26,7 +26,7 @@ if errorlevel 1 goto :FAIL_DIR
 
 echo.
 echo ============================================================
-echo                 ARDA LAUNCHER V12.1
+echo                 ARDA LAUNCHER V12.2
 echo             Automatic Installer and Updater
 echo ============================================================
 echo.
