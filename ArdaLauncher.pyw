@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""ARDA LAUNCHER v12.2 - GitHub dagitim dosyasi, yerel kurtarma ve guvenli indirme."""
+"""ARDA LAUNCHER v12.4 - Full-page developer console and GitHub tools."""
 import sys, os, json, time, hashlib, hmac, secrets, threading, shutil, queue
 import subprocess, ctypes, zipfile, re, base64, random, webbrowser, stat
 from pathlib import Path, PurePosixPath, PureWindowsPath
@@ -35,20 +35,20 @@ except ImportError:
 try: from PIL import Image, ImageDraw, ImageOps
 except ImportError:
     _show_fatal("Eksik", "pip install customtkinter Pillow requests psutil"); sys.exit(1)
-from tkinter import filedialog, messagebox
+from tkinter import filedialog, messagebox, simpledialog
 try: import winreg
 except ImportError: winreg = None
 try: import psutil
 except ImportError: psutil = None
 
 APP_NAME = "ARDA LAUNCHER"
-APP_VERSION = "12.2"
+APP_VERSION = "12.4"
 GITHUB_REPO = "ardafatih707-coder/Game-Launcher"
 
 INSTALLER_BAT_TEMPLATE = r"""@echo off
 setlocal EnableExtensions
 chcp 65001 >nul
-title ARDA LAUNCHER V12.2 - Installer and Updater
+title ARDA LAUNCHER V12.4 - Installer and Updater
 
 rem ============================================================
 rem ARDA LAUNCHER - Automatic Windows installer and updater
@@ -73,7 +73,7 @@ if errorlevel 1 goto :FAIL_DIR
 
 echo.
 echo ============================================================
-echo                 ARDA LAUNCHER V12.2
+echo                 ARDA LAUNCHER V12.4
 echo             Automatic Installer and Updater
 echo ============================================================
 echo.
@@ -388,11 +388,11 @@ LANGS = {"tr":"Türkçe","en":"English","de":"Deutsch","fr":"Français","es":"Es
          "it":"Italiano","pt":"Português","ru":"Русский","zh":"中文","ja":"日本語","ko":"한국어","ar":"العربية"}
 
 TR = {
-    "tagline":"ULTIMATE v12.2","home":"🏠 Ana Sayfa","browse":"🔎 Gözat","library":"📚 Kütüphane",
+    "tagline":"ULTIMATE v12.4","home":"🏠 Ana Sayfa","browse":"🔎 Gözat","library":"📚 Kütüphane",
     "downloads":"⬇ İndirmeler","wishlist":"⭐ İstek","tasks":"🎯 Görevler","profile":"👤 Profil","settings":"⚙ Ayarlar",
     "installed":"Yüklü Oyunlar","installed_count":"({}) Yüklü","credits":"💎 {:,} Kredi",
     "search_ph":"Oyun ara... (Ctrl+K)","daily_wheel":"🎡 Günlük Çark","report":"💬 Hata Bildir / Öneri",
-    "hero_tag":"ARDA LAUNCHER v12.2","hero_title":"105+ Ücretsiz Oyun",
+    "hero_tag":"ARDA LAUNCHER v12.4","hero_title":"105+ Ücretsiz Oyun",
     "hero_desc":"Steam kütüphanenle senkronize, GitHub'dan doğrudan indir.",
     "btn_browse":"▶ Gözat","btn_library":"📚 Kütüphane","btn_download":"İndir","btn_cancel":"İptal",
     "btn_pause":"⏸ Duraklat","btn_resume":"▶ Devam","btn_open":"📂 Aç","btn_install":"⬇ Kur",
@@ -440,11 +440,11 @@ TR = {
 }
 
 EN = {
-    "tagline":"ULTIMATE v12.2","home":"🏠 Home","browse":"🔎 Browse","library":"📚 Library",
+    "tagline":"ULTIMATE v12.4","home":"🏠 Home","browse":"🔎 Browse","library":"📚 Library",
     "downloads":"⬇ Downloads","wishlist":"⭐ Wishlist","tasks":"🎯 Tasks","profile":"👤 Profile","settings":"⚙ Settings",
     "installed":"Installed Games","installed_count":"({}) Installed","credits":"💎 {:,} Credits",
     "search_ph":"Search games... (Ctrl+K)","daily_wheel":"🎡 Daily Spin","report":"💬 Report / Suggest",
-    "hero_tag":"ARDA LAUNCHER v12.2","hero_title":"105+ Free Games",
+    "hero_tag":"ARDA LAUNCHER v12.4","hero_title":"105+ Free Games",
     "hero_desc":"Sync with Steam, download from GitHub.",
     "btn_browse":"▶ Browse","btn_library":"📚 Library","btn_download":"Download","btn_cancel":"Cancel",
     "btn_pause":"⏸ Pause","btn_resume":"▶ Resume","btn_open":"📂 Open","btn_install":"⬇ Install",
@@ -492,58 +492,58 @@ EN = {
 }
 
 PARTIAL_LANGS = {
-    "de":{"tagline":"ULTIMATE v12.2","home":"🏠 Startseite","browse":"🔎 Entdecken","library":"📚 Bibliothek",
+    "de":{"tagline":"ULTIMATE v12.4","home":"🏠 Startseite","browse":"🔎 Entdecken","library":"📚 Bibliothek",
           "downloads":"⬇ Downloads","wishlist":"⭐ Wunschliste","tasks":"🎯 Aufgaben","profile":"👤 Profil",
           "settings":"⚙ Einstellungen","installed":"Installierte Spiele","btn_download":"Herunterladen",
           "free":"KOSTENLOS","dev_title":"🔒 Entwickler-Login",
           "dev_authorized":"Nur wer das richtige Passwort eingibt, kann den Entwicklermodus betreten.",
           "hero_title":"105+ Kostenlose Spiele","language":"Sprache","add_wish":"⭐ Zur Wunschliste","add_lib":"📚 Zur Bibliothek"},
-    "fr":{"tagline":"ÉDITION v12.2","home":"🏠 Accueil","browse":"🔎 Parcourir","library":"📚 Bibliothèque",
+    "fr":{"tagline":"ÉDITION v12.4","home":"🏠 Accueil","browse":"🔎 Parcourir","library":"📚 Bibliothèque",
           "downloads":"⬇ Téléchargements","wishlist":"⭐ Souhaits","tasks":"🎯 Tâches","profile":"👤 Profil",
           "settings":"⚙ Paramètres","installed":"Jeux installés","btn_download":"Télécharger",
           "free":"GRATUIT","dev_title":"🔒 Connexion développeur",
           "dev_authorized":"Seuls ceux qui saisissent le bon mot de passe peuvent accéder au mode développeur.",
           "hero_title":"105+ Jeux Gratuits","language":"Langue","add_wish":"⭐ Ajouter aux souhaits","add_lib":"📚 Ajouter à la bibliothèque"},
-    "es":{"tagline":"EDICIÓN v12.2","home":"🏠 Inicio","browse":"🔎 Explorar","library":"📚 Biblioteca",
+    "es":{"tagline":"EDICIÓN v12.4","home":"🏠 Inicio","browse":"🔎 Explorar","library":"📚 Biblioteca",
           "downloads":"⬇ Descargas","wishlist":"⭐ Deseos","tasks":"🎯 Tareas","profile":"👤 Perfil",
           "settings":"⚙ Ajustes","installed":"Juegos instalados","btn_download":"Descargar",
           "free":"GRATIS","dev_title":"🔒 Acceso desarrollador",
           "dev_authorized":"Solo quienes ingresen la contraseña correcta pueden acceder al modo desarrollador.",
           "hero_title":"105+ Juegos Gratis","language":"Idioma","add_wish":"⭐ Añadir a deseos","add_lib":"📚 Añadir a biblioteca"},
-    "it":{"tagline":"EDIZIONE v12.2","home":"🏠 Home","browse":"🔎 Esplora","library":"📚 Libreria",
+    "it":{"tagline":"EDIZIONE v12.4","home":"🏠 Home","browse":"🔎 Esplora","library":"📚 Libreria",
           "downloads":"⬇ Download","wishlist":"⭐ Desideri","tasks":"🎯 Attività","profile":"👤 Profilo",
           "settings":"⚙ Impostazioni","installed":"Giochi installati","btn_download":"Scarica",
           "free":"GRATIS","dev_title":"🔒 Accesso sviluppatore",
           "dev_authorized":"Solo chi inserisce la password corretta può accedere alla modalità sviluppatore.",
           "hero_title":"105+ Giochi Gratuiti","language":"Lingua","add_wish":"⭐ Aggiungi ai desideri","add_lib":"📚 Aggiungi alla libreria"},
-    "pt":{"tagline":"EDIÇÃO v12.2","home":"🏠 Início","browse":"🔎 Explorar","library":"📚 Biblioteca",
+    "pt":{"tagline":"EDIÇÃO v12.4","home":"🏠 Início","browse":"🔎 Explorar","library":"📚 Biblioteca",
           "downloads":"⬇ Downloads","wishlist":"⭐ Desejos","tasks":"🎯 Tarefas","profile":"👤 Perfil",
           "settings":"⚙ Configurações","installed":"Jogos Instalados","btn_download":"Baixar",
           "free":"GRÁTIS","dev_title":"🔒 Login Desenvolvedor",
           "dev_authorized":"Apenas quem inserir a senha correta pode entrar no modo desenvolvedor.",
           "hero_title":"105+ Jogos Grátis","language":"Idioma","add_wish":"⭐ Adicionar aos Desejos","add_lib":"📚 Adicionar à Biblioteca"},
-    "ru":{"tagline":"ULTIMATE v12.2","home":"🏠 Главная","browse":"🔎 Обзор","library":"📚 Библиотека",
+    "ru":{"tagline":"ULTIMATE v12.4","home":"🏠 Главная","browse":"🔎 Обзор","library":"📚 Библиотека",
           "downloads":"⬇ Загрузки","wishlist":"⭐ Желания","tasks":"🎯 Задания","profile":"👤 Профиль",
           "settings":"⚙ Настройки","installed":"Установленные игры","btn_download":"Скачать",
           "free":"БЕСПЛАТНО","dev_title":"🔒 Вход разработчика",
           "dev_authorized":"Только те, кто введёт правильный пароль, могут войти в режим разработчика.",
           "hero_title":"105+ Бесплатных Игр","language":"Язык","add_wish":"⭐ В желания","add_lib":"📚 В библиотеку"},
-    "zh":{"tagline":"终极版 v12.2","home":"🏠 首页","browse":"🔎 浏览","library":"📚 库",
+    "zh":{"tagline":"终极版 v12.4","home":"🏠 首页","browse":"🔎 浏览","library":"📚 库",
           "downloads":"⬇ 下载","wishlist":"⭐ 愿望单","tasks":"🎯 任务","profile":"👤 个人",
           "settings":"⚙ 设置","installed":"已安装游戏","btn_download":"下载","free":"免费",
           "dev_title":"🔒 开发者登录","dev_authorized":"只有输入正确密码的人才能进入开发者模式。",
           "hero_title":"105+ 款免费游戏","language":"语言","add_wish":"⭐ 加入愿望单","add_lib":"📚 加入库"},
-    "ja":{"tagline":"v12.2","home":"🏠 ホーム","browse":"🔎 ブラウズ","library":"📚 ライブラリ",
+    "ja":{"tagline":"v12.4","home":"🏠 ホーム","browse":"🔎 ブラウズ","library":"📚 ライブラリ",
           "downloads":"⬇ ダウンロード","wishlist":"⭐ ウィッシュ","tasks":"🎯 タスク","profile":"👤 プロフィール",
           "settings":"⚙ 設定","installed":"インストール済み","btn_download":"ダウンロード","free":"無料",
           "dev_title":"🔒 開発者ログイン","dev_authorized":"正しいパスワードを入力した人だけが開発者モードに入れます。",
           "hero_title":"105+ 無料ゲーム","language":"言語","add_wish":"⭐ ウィッシュリストに追加","add_lib":"📚 ライブラリに追加"},
-    "ko":{"tagline":"v12.2","home":"🏠 홈","browse":"🔎 찾아보기","library":"📚 라이브러리",
+    "ko":{"tagline":"v12.4","home":"🏠 홈","browse":"🔎 찾아보기","library":"📚 라이브러리",
           "downloads":"⬇ 다운로드","wishlist":"⭐ 위시","tasks":"🎯 작업","profile":"👤 프로필",
           "settings":"⚙ 설정","installed":"설치된 게임","btn_download":"다운로드","free":"무료",
           "dev_title":"🔒 개발자 로그인","dev_authorized":"올바른 비밀번호를 입력한 사람만 개발자 모드에 들어갈 수 있습니다.",
           "hero_title":"105+ 무료 게임","language":"언어","add_wish":"⭐ 위시리스트에 추가","add_lib":"📚 라이브러리에 추가"},
-    "ar":{"tagline":"v12.2","home":"🏠 الرئيسية","browse":"🔎 تصفح","library":"📚 المكتبة",
+    "ar":{"tagline":"v12.4","home":"🏠 الرئيسية","browse":"🔎 تصفح","library":"📚 المكتبة",
           "downloads":"⬇ التنزيلات","wishlist":"⭐ الرغبات","tasks":"🎯 المهام","profile":"👤 الملف",
           "settings":"⚙ الإعدادات","installed":"الألعاب المثبتة","btn_download":"تحميل","free":"مجاني",
           "dev_title":"🔒 دخول المطور","dev_authorized":"فقط من يدخل كلمة المرور الصحيحة يمكنه الدخول إلى وضع المطور.",
@@ -783,7 +783,7 @@ class DownloadTask:
             response = requests.get(
                 f"https://api.github.com/repos/{self.game.repo}/releases/latest",
                 timeout=(8, 20),
-                headers={"User-Agent":"ArdaLauncher/12.2", "Accept":"application/vnd.github+json"},
+                headers={"User-Agent":"ArdaLauncher/12.4", "Accept":"application/vnd.github+json"},
             )
             try:
                 if response.status_code in (403, 429):
@@ -872,7 +872,7 @@ class DownloadTask:
                 return
 
             existing = part.stat().st_size if part.exists() else 0
-            headers = {"User-Agent":"ArdaLauncher/12.2"}
+            headers = {"User-Agent":"ArdaLauncher/12.4"}
             if existing > 0:
                 headers["Range"] = f"bytes={existing}-"
             self.state = "downloading"
@@ -914,7 +914,7 @@ class DownloadTask:
                 if not range_match or int(range_match.group(1)) != existing:
                     response.close()
                     response = requests.get(self.url, stream=True,
-                        headers={"User-Agent":"ArdaLauncher/12.2"},
+                        headers={"User-Agent":"ArdaLauncher/12.4"},
                         timeout=(15, 45), allow_redirects=True)
                     append_mode = False
                     fallback_url = urlparse(response.url)
@@ -1202,8 +1202,11 @@ class ArdaLauncher(ctk.CTk):
         navs = [("home",self.t("home")),("browse",self.t("browse")),("library",self.t("library")),
                 ("downloads",self.t("downloads")),("wishlist",self.t("wishlist")),
                 ("tasks",self.t("tasks")),("profile",self.t("profile")),("settings",self.t("settings"))]
+        if self._dev_verified:
+            navs.append(("developer", self.t("dev_mode_tab")))
         self.nav_buttons = {}
         nf = ctk.CTkFrame(self.sidebar, fg_color="transparent")
+        self.nav_frame = nf
         nf.pack(fill="x", padx=8, pady=6)
         for pid, lbl in navs:
             b = ctk.CTkButton(nf, text=lbl, anchor="w", height=36, fg_color="transparent",
@@ -1230,6 +1233,25 @@ class ArdaLauncher(ctk.CTk):
         self.credit_lbl = ctk.CTkLabel(info, text=self.t("credits", self.settings['credits']),
             font=ctk.CTkFont(size=11), text_color=C_GOLD)
         self.credit_lbl.pack(anchor="w")
+
+    def _refresh_developer_nav(self):
+        """Show the Developer Mode page only while the developer session is authenticated."""
+        try:
+            button = self.nav_buttons.get("developer")
+            if self._dev_verified:
+                if button is None or not button.winfo_exists():
+                    button = ctk.CTkButton(
+                        self.nav_frame, text=self.t("dev_mode_tab"), anchor="w", height=36,
+                        fg_color="transparent", hover_color=C_PANEL2, text_color=C_TEXT,
+                        font=ctk.CTkFont(size=13), command=lambda: self.show_page("developer"))
+                    button.pack(fill="x", pady=1)
+                    self.nav_buttons["developer"] = button
+            elif button is not None:
+                try: button.destroy()
+                except Exception: pass
+                self.nav_buttons.pop("developer", None)
+        except Exception as exc:
+            log_error(f"developer navigation refresh: {exc}")
 
     def _refresh_installed_list(self):
         if not hasattr(self, "installed_list"): return
@@ -1300,6 +1322,8 @@ class ArdaLauncher(ctk.CTk):
 
     def _load_page(self, pid, record=True):
         try:
+            if pid == "developer" and not self._dev_verified:
+                pid = "settings"
             self._cancel_hero()
             if record:
                 self.nav_history = self.nav_history[:self.nav_index+1]
@@ -1311,7 +1335,8 @@ class ArdaLauncher(ctk.CTk):
                               text_color=C_NEON if nid==pid else C_TEXT)
             pages = {"home":self._page_home,"browse":self._page_browse,"library":self._page_library,
                      "downloads":self._page_downloads,"wishlist":self._page_wishlist,"tasks":self._page_tasks,
-                     "profile":self._page_profile,"settings":self._page_settings}
+                     "profile":self._page_profile,"settings":self._page_settings,
+                     "developer":self._page_developer}
             try: pages.get(pid, self._page_home)()
             except Exception as e:
                 log_error(f"page {pid}: {e}")
@@ -1607,8 +1632,6 @@ class ArdaLauncher(ctk.CTk):
         tabs.pack(fill="both", expand=True, padx=24, pady=10)
         tnames = (self.t("tab_storage"), self.t("tab_network"), self.t("tab_perf"),
                   self.t("tab_appear"), self.t("tab_sound"), self.t("tab_maint"))
-        if self._dev_verified:
-            tnames += (self.t("dev_mode_tab"),)
         for tn in tnames: tabs.add(tn)
         f = tabs.tab(tnames[0])
         self._kv(f, self.t("data_dir"), str(DATA_DIR))
@@ -1683,100 +1706,117 @@ class ArdaLauncher(ctk.CTk):
         ctk.CTkButton(f, text=self.t("export_installer"), width=240, command=self._export_installer).pack(anchor="w", padx=16, pady=6)
         ctk.CTkButton(f, text=self.t("backup_json"), width=240, command=self._backup).pack(anchor="w", padx=16, pady=6)
         ctk.CTkButton(f, text=self.t("uninstall"), width=240, fg_color=C_ERR, command=self._uninstall).pack(anchor="w", padx=16, pady=6)
-        if self._dev_verified:
-            self._build_developer_tab(tabs.tab(tnames[-1]))
+
+    def _page_developer(self):
+        """Dedicated, full-width Developer Mode page (visible only after authentication)."""
+        if not self._dev_verified:
+            self._load_page("settings", record=False)
+            return
+        hero = ctk.CTkFrame(self.scroll, fg_color=C_PANEL2, corner_radius=16)
+        hero.pack(fill="x", padx=22, pady=(18,10))
+        ctk.CTkLabel(hero, text="🛠  GELİŞTİRİCİ KONSOLU",
+            font=ctk.CTkFont(size=25, weight="bold"), text_color=C_NEON).pack(anchor="w", padx=22, pady=(16,4))
+        ctk.CTkLabel(hero, text=f"Depo kontrol merkezi  •  {GITHUB_REPO}  •  Geliştirici oturumu açık",
+            font=ctk.CTkFont(size=12), text_color=C_MUTED).pack(anchor="w", padx=22, pady=(0,16))
+        self._build_developer_tab(self.scroll)
 
     def _build_developer_tab(self, parent):
-        """Developer-only GitHub file manager. It is not constructed for normal users."""
-        panel = ctk.CTkScrollableFrame(parent, fg_color="transparent")
-        panel.pack(fill="both", expand=True, padx=8, pady=8)
-        ctk.CTkLabel(panel, text="GitHub Dosya Yöneticisi",
-            font=ctk.CTkFont(size=19, weight="bold"), text_color=C_NEON).pack(anchor="w", padx=10, pady=(8,4))
-        ctk.CTkLabel(panel, text=f"Depo: {GITHUB_REPO}  •  Gmail veya SMTP kullanılmaz. GitHub yazma izni gerekir.",
-            text_color=C_MUTED, wraplength=720, justify="left").pack(anchor="w", padx=10, pady=(0,10))
+        """Build the full-page developer console, not a small settings sub-tab."""
+        panel = ctk.CTkFrame(parent, fg_color="transparent")
+        panel.pack(fill="both", expand=True, padx=22, pady=(0,18))
 
-        ctk.CTkLabel(panel, text="GitHub Fine-grained Token (Contents: Read and write)",
-            text_color=C_TEXT).pack(anchor="w", padx=10, pady=(6,3))
+        # Credentials and branch controls span the full workspace width.
+        auth_card = ctk.CTkFrame(panel, fg_color=C_PANEL, corner_radius=14)
+        auth_card.pack(fill="x", padx=2, pady=(2,10))
+        ctk.CTkLabel(auth_card, text="1. GITHUB BAĞLANTISI",
+            font=ctk.CTkFont(size=15, weight="bold"), text_color=C_TEXT).pack(anchor="w", padx=16, pady=(13,5))
+        ctk.CTkLabel(auth_card, text="Fine-grained Personal Access Token  •  Gerekli izin: Contents / Read and write",
+            text_color=C_MUTED).pack(anchor="w", padx=16, pady=(0,5))
         self._github_token_var = ctk.StringVar(value="")
-        token_row = ctk.CTkFrame(panel, fg_color="transparent")
-        token_row.pack(fill="x", padx=10, pady=3)
+        token_row = ctk.CTkFrame(auth_card, fg_color="transparent")
+        token_row.pack(fill="x", padx=14, pady=(2,8))
         self._github_token_entry = ctk.CTkEntry(token_row, textvariable=self._github_token_var,
-            show="•", placeholder_text="Token girin; kayıtlı token varsa boş bırakın", height=36)
-        self._github_token_entry.pack(side="left", fill="x", expand=True, padx=(0,6))
-        ctk.CTkButton(token_row, text="Tokeni güvenli kaydet", width=160,
+            show="•", placeholder_text="GitHub tokenini buraya yapıştır; kayıtlı tokeni kullanmak için boş bırak", height=38)
+        self._github_token_entry.pack(side="left", fill="x", expand=True, padx=(0,8))
+        ctk.CTkButton(token_row, text="Tokeni güvenli kaydet", width=160, height=38,
             command=self._github_store_token).pack(side="left", padx=3)
-        ctk.CTkButton(token_row, text="Kayıtlı tokeni sil", width=135, fg_color=C_ERR,
+        ctk.CTkButton(token_row, text="Kayıtlı tokeni sil", width=150, height=38, fg_color=C_ERR,
             command=self._github_clear_token).pack(side="left", padx=3)
 
-        branch_row = ctk.CTkFrame(panel, fg_color="transparent")
-        branch_row.pack(fill="x", padx=10, pady=(12,4))
-        ctk.CTkLabel(branch_row, text="Branch:", width=90, anchor="w", text_color=C_TEXT).pack(side="left")
+        branch_row = ctk.CTkFrame(auth_card, fg_color="transparent")
+        branch_row.pack(fill="x", padx=14, pady=(0,13))
+        ctk.CTkLabel(branch_row, text="Hedef branch:", width=110, anchor="w", text_color=C_TEXT).pack(side="left")
         self._github_branch_var = ctk.StringVar(value="")
         ctk.CTkEntry(branch_row, textvariable=self._github_branch_var,
-            placeholder_text="Boş bırakılırsa deponun varsayılan branch'i", height=34).pack(side="left", fill="x", expand=True)
-        ctk.CTkButton(branch_row, text="Bağlantıyı test et", width=150,
+            placeholder_text="Depodaki varsayılan branch için boş bırak", height=36).pack(side="left", fill="x", expand=True)
+        ctk.CTkButton(branch_row, text="Bağlantıyı test et", width=160, height=36,
             command=self._github_test_connection).pack(side="left", padx=(8,0))
 
-        ctk.CTkLabel(panel, text="GitHub hedef dosya yolu:", text_color=C_TEXT).pack(anchor="w", padx=10, pady=(12,3))
+        # File-level upload and whole-project replacement are separated visually.
+        upload_card = ctk.CTkFrame(panel, fg_color=C_PANEL, corner_radius=14)
+        upload_card.pack(fill="x", padx=2, pady=10)
+        ctk.CTkLabel(upload_card, text="2. TEK DOSYA YÜKLEME / GÜNCELLEME",
+            font=ctk.CTkFont(size=15, weight="bold"), text_color=C_TEXT).pack(anchor="w", padx=16, pady=(13,6))
+        ctk.CTkLabel(upload_card, text="GitHub hedef dosya yolu", text_color=C_MUTED).pack(anchor="w", padx=16)
         self._github_path_var = ctk.StringVar(value="")
-        ctk.CTkEntry(panel, textvariable=self._github_path_var,
-            placeholder_text="ör. launcher.py veya assets/config.json", height=34).pack(fill="x", padx=10, pady=3)
-
-        ctk.CTkLabel(panel, text="Bilgisayardaki dosya:", text_color=C_TEXT).pack(anchor="w", padx=10, pady=(10,3))
-        local_row = ctk.CTkFrame(panel, fg_color="transparent")
-        local_row.pack(fill="x", padx=10, pady=3)
+        ctk.CTkEntry(upload_card, textvariable=self._github_path_var,
+            placeholder_text="Örnek: ArdaLauncher.pyw veya assets/config.json", height=36).pack(fill="x", padx=14, pady=(3,7))
+        ctk.CTkLabel(upload_card, text="Bilgisayardaki dosya", text_color=C_MUTED).pack(anchor="w", padx=16)
+        local_row = ctk.CTkFrame(upload_card, fg_color="transparent")
+        local_row.pack(fill="x", padx=14, pady=(3,7))
         self._github_local_var = ctk.StringVar(value="")
         ctk.CTkEntry(local_row, textvariable=self._github_local_var,
-            placeholder_text="Güncellenecek yerel dosyayı seçin", height=34).pack(side="left", fill="x", expand=True)
-        ctk.CTkButton(local_row, text="Dosya seç", width=110,
-            command=self._github_choose_local).pack(side="left", padx=(6,0))
+            placeholder_text="Eklenecek veya güncellenecek dosyayı seç", height=36).pack(side="left", fill="x", expand=True)
+        ctk.CTkButton(local_row, text="Dosya seç...", width=120, height=36,
+            command=self._github_choose_local).pack(side="left", padx=(8,0))
+        ctk.CTkLabel(upload_card, text="Commit mesajı", text_color=C_MUTED).pack(anchor="w", padx=16)
+        self._github_commit_var = ctk.StringVar(value="Launcher dosyaları güncellendi")
+        ctk.CTkEntry(upload_card, textvariable=self._github_commit_var, height=36).pack(fill="x", padx=14, pady=(3,12))
 
-        ctk.CTkLabel(panel, text="Tüm depoyu eşitlemek için proje klasörü:",
-            text_color=C_TEXT).pack(anchor="w", padx=10, pady=(12,3))
-        folder_row = ctk.CTkFrame(panel, fg_color="transparent")
-        folder_row.pack(fill="x", padx=10, pady=3)
+        mirror_card = ctk.CTkFrame(panel, fg_color=C_PANEL, corner_radius=14)
+        mirror_card.pack(fill="x", padx=2, pady=10)
+        ctk.CTkLabel(mirror_card, text="3. TÜM DEPOYU DEĞİŞTİR",
+            font=ctk.CTkFont(size=15, weight="bold"), text_color=C_TEXT).pack(anchor="w", padx=16, pady=(13,5))
+        ctk.CTkLabel(mirror_card,
+            text="Seçilen yerel klasör hedef branch içeriğinin tamamı olur. Yerel klasörde bulunmayan GitHub dosyaları önizleme ve iki onaydan sonra silinir.",
+            text_color=C_ERR, wraplength=1100, justify="left").pack(anchor="w", padx=16, pady=(0,6))
+        folder_row = ctk.CTkFrame(mirror_card, fg_color="transparent")
+        folder_row.pack(fill="x", padx=14, pady=(2,8))
         self._github_folder_var = ctk.StringVar(value="")
         ctk.CTkEntry(folder_row, textvariable=self._github_folder_var,
-            placeholder_text="ArdaLauncher.pyw, version.json ve diğer proje dosyalarının bulunduğu klasör",
-            height=34).pack(side="left", fill="x", expand=True)
-        ctk.CTkButton(folder_row, text="Klasör seç", width=110,
-            command=self._github_choose_folder).pack(side="left", padx=(6,0))
+            placeholder_text="Tüm proje klasörünü seç", height=38).pack(side="left", fill="x", expand=True)
+        ctk.CTkButton(folder_row, text="Klasör seç...", width=145, height=38,
+            command=self._github_choose_folder).pack(side="left", padx=(8,0))
 
-        ctk.CTkLabel(panel,
-            text="Klasör eşitleme: Yeni dosyalar eklenir, değişenler güncellenir, aynı olanlar atlanır. GitHub'daki fazladan dosyalar silinmez.",
-            text_color=C_MUTED, wraplength=720, justify="left").pack(anchor="w", padx=10, pady=(2,6))
-
-        ctk.CTkLabel(panel, text="Commit mesajı:", text_color=C_TEXT).pack(anchor="w", padx=10, pady=(10,3))
-        self._github_commit_var = ctk.StringVar(value="Launcher dosyası güncellendi")
-        ctk.CTkEntry(panel, textvariable=self._github_commit_var, height=34).pack(fill="x", padx=10, pady=3)
-
-        action_row = ctk.CTkFrame(panel, fg_color="transparent")
-        action_row.pack(fill="x", padx=10, pady=10)
-        ctk.CTkButton(action_row, text="Depodaki dosyaları listele", width=210,
-            fg_color=C_PURPLE, command=self._github_list_files).pack(side="left", padx=(0,6))
-        ctk.CTkButton(action_row, text="GitHub'a yükle / güncelle", width=230,
+        action_row = ctk.CTkFrame(mirror_card, fg_color="transparent")
+        action_row.pack(fill="x", padx=14, pady=(0,13))
+        ctk.CTkButton(action_row, text="Depodaki dosyaları listele", width=190, height=38,
+            fg_color=C_PURPLE, command=self._github_list_files).pack(side="left", padx=(0,7))
+        ctk.CTkButton(action_row, text="Seçili dosyayı yükle / güncelle", width=235, height=38,
             fg_color=C_NEON, text_color="#000", hover_color="#5DDFFF",
-            command=self._github_upload_selected).pack(side="left", padx=6)
-        ctk.CTkButton(action_row, text="Geliştirici modundan çık", width=190,
-            fg_color=C_PANEL2, command=self._dev_logout).pack(side="right", padx=(6,0))
-
-        sync_row = ctk.CTkFrame(panel, fg_color="transparent")
-        sync_row.pack(fill="x", padx=10, pady=(0,8))
-        ctk.CTkButton(sync_row, text="TÜM KLASÖRÜ GITHUB'A EŞİTLE", width=280, height=38,
+            command=self._github_upload_selected).pack(side="left", padx=7)
+        ctk.CTkButton(action_row, text="GITHUB DEPOSUNU KLASÖRLE DEĞİŞTİR", height=38,
             fg_color=C_OK, text_color="#06110B", hover_color="#4ADE80",
-            command=self._github_sync_folder).pack(side="left", padx=6)
+            command=self._github_sync_folder).pack(side="left", padx=7)
+        ctk.CTkButton(action_row, text="Geliştirici modundan çık", width=105, height=38,
+            fg_color=C_PANEL2, command=self._dev_logout).pack(side="right", padx=(7,0))
 
-        self._github_status_label = ctk.CTkLabel(panel,
-            text=("Kayıtlı şifreli token bulundu. Alanı boş bırakabilirsiniz." if self.settings.get("github_token_enc") else "Token henüz kaydedilmedi."),
-            text_color=C_MUTED, wraplength=720, justify="left")
-        self._github_status_label.pack(anchor="w", padx=10, pady=(0,8))
-        ctk.CTkLabel(panel,
-            text="Not: Fine-grained token yalnızca bu depoya erişmeli ve Contents izni Write olmalı. .github/workflows/ altındaki dosyalar için Workflows izni de gerekir. Dosya sınırı: 20 MB.",
-            text_color=C_MUTED, wraplength=720, justify="left").pack(anchor="w", padx=10, pady=(0,8))
-        self._github_files_frame = ctk.CTkScrollableFrame(panel, fg_color=C_PANEL2, height=210)
-        self._github_files_frame.pack(fill="x", padx=10, pady=(4,12))
-        ctk.CTkLabel(self._github_files_frame, text="Dosya listesini görmek için yukarıdaki düğmeye basın.",
-            text_color=C_MUTED).pack(anchor="w", padx=8, pady=8)
+        status_card = ctk.CTkFrame(panel, fg_color=C_PANEL, corner_radius=14)
+        status_card.pack(fill="x", padx=2, pady=(2,8))
+        self._github_status_label = ctk.CTkLabel(status_card,
+            text=("Şifreli token kaydedildi. Token alanını boş bırakabilirsin." if self.settings.get("github_token_enc") else "Henüz GitHub tokeni kaydedilmedi."),
+            text_color=C_MUTED, wraplength=1100, justify="left")
+        self._github_status_label.pack(anchor="w", padx=16, pady=(10,3))
+        ctk.CTkLabel(status_card,
+            text="Yalnızca bu depoya erişen Fine-grained token kullan. Contents izni Read and write olmalı. .github/workflows altındaki dosyalar için ayrıca Workflows: write gerekebilir. En büyük dosya boyutu: 20 MB.",
+            text_color=C_MUTED, wraplength=1100, justify="left").pack(anchor="w", padx=16, pady=(0,10))
+
+        ctk.CTkLabel(panel, text="DEPO DOSYALARI", font=ctk.CTkFont(size=15, weight="bold"),
+            text_color=C_TEXT).pack(anchor="w", padx=8, pady=(8,4))
+        self._github_files_frame = ctk.CTkScrollableFrame(panel, fg_color=C_PANEL2, height=340, corner_radius=12)
+        self._github_files_frame.pack(fill="both", expand=True, padx=2, pady=(0,10))
+        ctk.CTkLabel(self._github_files_frame, text="Hedef branch dosyalarını görmek için yukarıdaki düğmeye bas.",
+            text_color=C_MUTED).pack(anchor="w", padx=10, pady=10)
 
     def _github_set_status(self, message, color=C_MUTED):
         try:
@@ -1851,7 +1891,7 @@ class ArdaLauncher(ctk.CTk):
             "Accept": "application/vnd.github+json",
             "Authorization": f"Bearer {token}",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "ArdaLauncher/12.2",
+            "User-Agent": "ArdaLauncher/12.4",
         }
         try:
             response = requests.request(method, "https://api.github.com" + endpoint,
@@ -1902,20 +1942,24 @@ class ArdaLauncher(ctk.CTk):
             raise ValueError("Branch adı geçersiz.")
         return endpoint, branch
 
-    def _github_get_tree_sha(self, repo_endpoint, branch, token):
+    def _github_get_branch_state(self, repo_endpoint, branch, token):
+        """Return the current branch head commit SHA and its root tree SHA."""
         ref = self._github_api_request("GET",
             f"{repo_endpoint}/git/ref/heads/{quote(branch, safe='/')}", token)
         obj = ref.get("object", {}) if isinstance(ref, dict) else {}
         commit_sha = obj.get("sha") if isinstance(obj, dict) else None
         if not isinstance(commit_sha, str) or not re.fullmatch(r"[0-9a-fA-F]{40,64}", commit_sha):
-            raise RuntimeError("GitHub branch referansı geçerli bir commit SHA döndürmedi.")
+            raise RuntimeError("GitHub branch reference did not return a valid commit SHA.")
         commit = self._github_api_request("GET",
             f"{repo_endpoint}/git/commits/{quote(commit_sha, safe='')}", token)
         tree = commit.get("tree", {}) if isinstance(commit, dict) else {}
         tree_sha = tree.get("sha") if isinstance(tree, dict) else None
         if not isinstance(tree_sha, str) or not re.fullmatch(r"[0-9a-fA-F]{40,64}", tree_sha):
-            raise RuntimeError("GitHub commit kaydında geçerli bir tree SHA bulunamadı.")
-        return tree_sha
+            raise RuntimeError("GitHub commit did not contain a valid tree SHA.")
+        return commit_sha, tree_sha
+
+    def _github_get_tree_sha(self, repo_endpoint, branch, token):
+        return self._github_get_branch_state(repo_endpoint, branch, token)[1]
 
     def _github_test_connection(self):
         if self._github_busy:
@@ -2086,120 +2130,261 @@ class ArdaLauncher(ctk.CTk):
             self._github_folder_var.set(selected)
 
     def _github_sync_folder(self):
-        """Add/update every eligible local project file on the selected GitHub branch."""
+        """Replace the selected GitHub branch tree with the selected local project folder.
+
+        Files are written as Git blobs, a replacement tree and commit are created,
+        and the branch ref is advanced once. Remote files absent locally are deleted.
+        """
         if self._github_busy:
             return
         try:
             token = self._github_current_token()
             root, local_files, skipped_count, too_large = self._github_collect_folder_files(
                 self._github_folder_var.get().strip())
-            commit_prefix = self._github_commit_var.get().strip()
-            if not commit_prefix:
-                raise ValueError("Commit mesajı boş olamaz.")
-            if len(commit_prefix) > 200 or any(ord(ch) < 32 for ch in commit_prefix):
-                raise ValueError("Commit mesajı 200 karakteri aşmamalı ve kontrol karakteri içermemeli.")
+            if too_large:
+                preview_large = ", ".join(path for path, _ in too_large[:6])
+                raise ValueError(
+                    "Tam değiştirme iptal edildi: 20 MB sınırını aşan yerel dosyalar var. "
+                    "Bu dosyalar yüklenemeyeceği için GitHub'daki kopyalarını yanlışlıkla silmemek adına "
+                    f"işlem durduruldu. Örnekler: {preview_large}")
+            local_names = {p.name.casefold() for p in root.iterdir() if p.is_file()}
+            if not (local_names & {"ardalauncher.pyw", "arda launcher.pyw", "version.json"}):
+                raise ValueError(
+                    "Seçilen klasör bir ARDA LAUNCHER proje klasörü gibi görünmüyor. "
+                    "Kök dizinde ArdaLauncher.pyw veya version.json bulunmalı.")
+            commit_message = self._github_commit_var.get().strip()
+            if not commit_message:
+                raise ValueError("Commit mesajı cannot be empty.")
+            if len(commit_message) > 200 or any(ord(ch) < 32 for ch in commit_message):
+                raise ValueError("Commit mesajı must be 200 characters or fewer and contain no control characters.")
             branch_value = self._github_branch_var.get().strip()
             total_bytes = sum(item[2] for item in local_files)
+            if total_bytes > 100 * 1024 * 1024:
+                raise ValueError("Safety limit: the selected project folder may contain at most 100 MB of files per mirror operation.")
         except Exception as exc:
-            messagebox.showwarning("GitHub klasör eşitleme", str(exc))
+            messagebox.showwarning("GitHub full repository replacement", str(exc))
             return
 
-        preview = [f"Klasör: {root}", f"Depo: {GITHUB_REPO}",
-                   f"Dosya sayısı: {len(local_files)}",
-                   f"Toplam boyut: {total_bytes / (1024 * 1024):.2f} MB",
-                   f"Branch: {branch_value or 'varsayılan'}",
-                   f"Atlanacak hassas/önbellek dosyası: {skipped_count}",
-                   f"20 MB sınırını aşan dosya: {len(too_large)}",
-                   "\nYeni dosyalar eklenecek, farklı olanlar güncellenecek, aynı olanlar atlanacak.",
-                   "GitHub'da bu klasörde bulunmayan dosyalar SİLİNMEYECEK."]
-        if not messagebox.askyesno("Tüm klasörü GitHub'a eşitle", "\n".join(preview)):
+        first_warning = (
+            f"Local project folder:\n{root}\n\n"
+            f"Repository: {GITHUB_REPO}\n"
+            f"Branch: {branch_value or 'default branch'}\n"
+            f"Bilgisayardaki dosyas to publish: {len(local_files)}\n"
+            f"Total upload size: {total_bytes / (1024 * 1024):.2f} MB\n"
+            f"Local sensitive/cache files excluded: {skipped_count}\n\n"
+            "WARNING: This is a FULL REPLACEMENT, not an additive upload. "
+            "Every file currently in the selected GitHub branch that is not present "
+            "in the selected local project folder will be DELETED.\n\n"
+            "The app will show the deletion list and require a second confirmation before committing.\n\n"
+            "Continue to compare the selected folder with GitHub?"
+        )
+        if not messagebox.askyesno("Replace GitHub repository contents", first_warning, icon="warning"):
             return
 
         self._github_busy = True
-        self._github_set_status("GitHub deposu karşılaştırılıyor...", C_GOLD)
+        self._github_set_status("Reading the GitHub branch and building a replacement preview...", C_GOLD)
 
         def worker():
-            created = updated = unchanged = 0
+            created = updated = unchanged = deleted = 0
             failed_path = ""
-            commit_urls = []
+            commit_url = ""
             try:
                 repo_endpoint, branch = self._github_repo_and_branch(token, branch_value)
-                tree_sha = self._github_get_tree_sha(repo_endpoint, branch, token)
+                parent_commit_sha, base_tree_sha = self._github_get_branch_state(repo_endpoint, branch, token)
                 tree = self._github_api_request("GET",
-                    f"{repo_endpoint}/git/trees/{quote(tree_sha, safe='')}", token,
+                    f"{repo_endpoint}/git/trees/{quote(base_tree_sha, safe='')}", token,
                     params={"recursive": "1"})
                 if not isinstance(tree, dict) or not isinstance(tree.get("tree"), list):
-                    raise RuntimeError("GitHub deposunun dosya ağacı okunamadı.")
+                    raise RuntimeError("GitHub repository tree could not be read.")
                 if tree.get("truncated"):
-                    raise RuntimeError("GitHub dosya ağacı 100.000 kayıt sınırında kırpıldı. Güvenli eşitleme için işlem durduruldu.")
-                remote_sha = {
-                    item.get("path"): item.get("sha")
-                    for item in tree["tree"]
-                    if isinstance(item, dict) and item.get("type") == "blob"
-                    and isinstance(item.get("path"), str) and isinstance(item.get("sha"), str)
-                }
-                for index, (local_path, remote_path, original_size) in enumerate(local_files, 1):
-                    failed_path = remote_path
-                    data = local_path.read_bytes()
-                    if len(data) > 20 * 1024 * 1024:
-                        raise RuntimeError(f"Dosya tarama sonrasında 20 MB sınırını aştı: {remote_path}")
-                    blob_sha = self._github_git_blob_sha(data)
-                    previous_sha = remote_sha.get(remote_path)
-                    if previous_sha == blob_sha:
-                        unchanged += 1
-                    else:
-                        encoded_path = quote(remote_path, safe="/")
-                        endpoint = f"{repo_endpoint}/contents/{encoded_path}"
-                        payload = {
-                            "message": (f"{commit_prefix}: {remote_path}")[:200],
-                            "content": base64.b64encode(data).decode("ascii"),
-                            "branch": branch,
-                        }
-                        if previous_sha:
-                            payload["sha"] = previous_sha
-                        result = self._github_api_request("PUT", endpoint, token, payload=payload)
-                        commit = result.get("commit", {}) if isinstance(result, dict) else {}
-                        commit_url = commit.get("html_url", "") if isinstance(commit, dict) else ""
-                        if commit_url and len(commit_urls) < 3:
-                            commit_urls.append(commit_url)
-                        if previous_sha:
-                            updated += 1
-                        else:
-                            created += 1
-                    current = index
-                    self._post_ui(lambda i=current, n=len(local_files), p=remote_path,
-                                         c=created, u=updated, s=unchanged:
-                        self._github_set_status(
-                            f"Eşitleniyor: {i}/{n} • {p}\nEklendi: {c} • Güncellendi: {u} • Değişmedi: {s}",
-                            C_GOLD))
+                    raise RuntimeError("GitHub returned a truncated tree (over the API tree limit). No files were changed.")
 
-                result_text = (
-                    "GitHub klasör eşitlemesi tamamlandı.\n"
-                    f"Branch: {branch}\n"
-                    f"Yeni eklenen: {created}\n"
-                    f"Güncellenen: {updated}\n"
-                    f"Değişmediği için atlanan: {unchanged}\n"
-                    f"Hassas/önbellek dosyaları: {skipped_count}\n"
-                    f"20 MB üstü dosyalar: {len(too_large)}\n"
-                    "GitHub'da fazladan bulunan dosyalar korunmuştur."
+                remote_items = {}
+                for item in tree["tree"]:
+                    if not isinstance(item, dict):
+                        continue
+                    path = item.get("path")
+                    kind = item.get("type")
+                    sha = item.get("sha")
+                    mode = item.get("mode")
+                    if (isinstance(path, str) and isinstance(sha, str)
+                            and kind in ("blob", "commit")
+                            and mode in ("100644", "100755", "120000", "160000")):
+                        remote_items[path] = {"sha": sha, "type": kind, "mode": mode}
+
+                local_by_path = {remote_path: (local_path, size)
+                                 for local_path, remote_path, size in local_files}
+                local_paths = set(local_by_path)
+
+                # Remove stale paths and file/directory collisions so the new tree
+                # has exactly the shape represented by the local folder.
+                delete_paths = set()
+                for remote_path in remote_items:
+                    if remote_path not in local_paths:
+                        delete_paths.add(remote_path)
+                        continue
+                for local_path in local_paths:
+                    for remote_path in remote_items:
+                        if (local_path.startswith(remote_path + "/")
+                                or remote_path.startswith(local_path + "/")):
+                            delete_paths.add(remote_path)
+
+                # A same-path file that is already identical is unchanged unless a
+                # remote file/directory collision forced that path to be removed.
+                changed_local = []
+                for remote_path, (local_path, expected_size) in sorted(local_by_path.items()):
+                    failed_path = remote_path
+                    content = local_path.read_bytes()
+                    if len(content) != expected_size:
+                        raise RuntimeError(f"Bilgisayardaki dosya changed while preparing the mirror: {remote_path}")
+                    if len(content) > 20 * 1024 * 1024:
+                        raise RuntimeError(f"File exceeded the 20 MB upload limit during sync: {remote_path}")
+                    previous = remote_items.get(remote_path)
+                    blob_sha = self._github_git_blob_sha(content)
+                    if (previous and previous.get("type") == "blob"
+                            and previous.get("mode") == "100644"
+                            and previous.get("sha") == blob_sha and remote_path not in delete_paths):
+                        unchanged += 1
+                        continue
+                    changed_local.append((remote_path, content, previous))
+                    if previous:
+                        updated += 1
+                    else:
+                        created += 1
+
+                planned_changes = len(changed_local) + len(delete_paths)
+                if planned_changes > 5000:
+                    raise RuntimeError(
+                        f"Mirror operation would change {planned_changes} paths, above the 5,000-path safety limit. "
+                        "No branch changes were committed.")
+
+                # Show exactly what will be removed and require the user to type REPLACE.
+                deletion_preview = sorted(delete_paths)
+                decision = {"confirmed": False, "cancelled": False}
+                ready = threading.Event()
+                def ask_final_confirmation():
+                    try:
+                        if getattr(self, "_closing", False):
+                            decision["cancelled"] = True
+                            return
+                        lines = [
+                            f"Repository: {GITHUB_REPO}",
+                            f"Branch: {branch}",
+                            f"Bilgisayardaki dosyas: {len(local_paths)}",
+                            f"New files: {created}",
+                            f"Updated files: {updated}",
+                            f"Unchanged files: {unchanged}",
+                            f"Files to DELETE: {len(deletion_preview)}",
+                            "",
+                            "Files that will be deleted (first 35):",
+                        ]
+                        lines.extend("  • " + p for p in deletion_preview[:35])
+                        if len(deletion_preview) > 35:
+                            lines.append(f"  ... and {len(deletion_preview) - 35} more files")
+                        lines.extend([
+                            "",
+                            "After confirmation, one commit will replace the branch tree.",
+                            "This can remove README, old launcher versions, workflows, and other files not in the selected local folder.",
+                            "Continue to the final confirmation?",
+                        ])
+                        if not messagebox.askyesno("Review GitHub files to delete", "\n".join(lines), icon="warning"):
+                            decision["cancelled"] = True
+                            return
+                        if deletion_preview:
+                            typed = simpledialog.askstring(
+                                "Confirm permanent GitHub replacement",
+                                f"This will delete {len(deletion_preview)} old file(s) from {GITHUB_REPO}/{branch}.\n\n"
+                                "Type REPLACE (uppercase) to continue:")
+                            decision["confirmed"] = typed == "REPLACE"
+                        else:
+                            decision["confirmed"] = True
+                    except Exception as dialog_exc:
+                        log_error(f"GitHub mirror confirmation dialog: {dialog_exc}")
+                        decision["cancelled"] = True
+                    finally:
+                        ready.set()
+
+                self._post_ui(ask_final_confirmation)
+                if not ready.wait(300):
+                    raise RuntimeError("Confirmation window timed out. No branch changes were committed.")
+                if not decision["confirmed"]:
+                    self._post_ui(lambda: self._github_set_status(
+                        "Full replacement cancelled. The GitHub branch was not changed.", C_MUTED))
+                    return
+
+                if not changed_local and not delete_paths:
+                    self._post_ui(lambda: self._github_set_status(
+                        f"GitHub is already an exact match for the selected folder. No commit was needed. Branch: {branch}", C_OK))
+                    return
+
+                # Only after explicit confirmation do we upload new blobs.
+                # Until this point the repository has not been modified or even sent new objects.
+                tree_entries = []
+                for index, (remote_path, content, previous) in enumerate(changed_local, 1):
+                    failed_path = remote_path
+                    blob = self._github_api_request("POST", f"{repo_endpoint}/git/blobs", token,
+                        payload={"content": base64.b64encode(content).decode("ascii"), "encoding": "base64"})
+                    blob_sha = blob.get("sha") if isinstance(blob, dict) else None
+                    if not isinstance(blob_sha, str) or not re.fullmatch(r"[0-9a-fA-F]{40,64}", blob_sha):
+                        raise RuntimeError(f"GitHub did not return a valid blob SHA for {remote_path}.")
+                    tree_entries.append({"path": remote_path, "mode": "100644", "type": "blob", "sha": blob_sha})
+                    count = index
+                    self._post_ui(lambda i=count, n=len(changed_local), p=remote_path,
+                                         c=created, u=updated, d=len(delete_paths):
+                        self._github_set_status(
+                            f"Uploading replacement files: {i}/{n} changed files\n"
+                            f"New: {c} • Updated: {u} • To delete: {d} • Unchanged: {unchanged}", C_GOLD))
+
+                for remote_path in sorted(delete_paths):
+                    old = remote_items[remote_path]
+                    tree_entries.append({
+                        "path": remote_path,
+                        "mode": old["mode"],
+                        "type": old["type"],
+                        "sha": None,
+                    })
+
+                self._post_ui(lambda: self._github_set_status(
+                    f"Creating one atomic replacement commit... New: {created} • Updated: {updated} • "
+                    f"Delete: {len(delete_paths)} • Unchanged: {unchanged}", C_GOLD))
+                new_tree = self._github_api_request("POST", f"{repo_endpoint}/git/trees", token,
+                    payload={"base_tree": base_tree_sha, "tree": tree_entries})
+                new_tree_sha = new_tree.get("sha") if isinstance(new_tree, dict) else None
+                if not isinstance(new_tree_sha, str) or not re.fullmatch(r"[0-9a-fA-F]{40,64}", new_tree_sha):
+                    raise RuntimeError("GitHub did not return a valid replacement tree SHA.")
+
+                new_commit = self._github_api_request("POST", f"{repo_endpoint}/git/commits", token,
+                    payload={"message": commit_message, "tree": new_tree_sha, "parents": [parent_commit_sha]})
+                new_commit_sha = new_commit.get("sha") if isinstance(new_commit, dict) else None
+                if not isinstance(new_commit_sha, str) or not re.fullmatch(r"[0-9a-fA-F]{40,64}", new_commit_sha):
+                    raise RuntimeError("GitHub did not return a valid replacement commit SHA.")
+                commit_url = str(new_commit.get("html_url") or "")
+
+                ref_url = f"{repo_endpoint}/git/refs/heads/{quote(branch, safe='/')}"
+                self._github_api_request("PATCH", ref_url, token,
+                    payload={"sha": new_commit_sha, "force": False})
+                deleted = len(delete_paths)
+                message = (
+                    "FULL GITHUB REPLACEMENT COMPLETED.\n"
+                    f"Repository: {GITHUB_REPO}\nBranch: {branch}\n"
+                    f"New files: {created}\nUpdated files: {updated}\n"
+                    f"Unchanged files: {unchanged}\nDeleted old files: {deleted}\n"
+                    f"Excluded local sensitive/cache files: {skipped_count}\n"
+                    "All branch contents now match the selected local project folder."
                 )
-                if too_large:
-                    result_text += "\nAtlanan büyük dosyalar: " + ", ".join(p for p, _ in too_large[:8])
-                if commit_urls:
-                    result_text += "\nÖrnek commit: " + commit_urls[-1]
-                self._post_ui(lambda msg=result_text: self._github_set_status(msg, C_OK))
-                if too_large:
-                    log_error("GitHub folder sync skipped oversized files: " + ", ".join(p for p, _ in too_large))
+                if commit_url:
+                    message += f"\nCommit: {commit_url}"
+                self._post_ui(lambda msg=message: self._github_set_status(msg, C_OK))
             except Exception as exc:
-                message = f"Klasör eşitlemesi tamamlanamadı.\n"
-                message += f"Tamamlanan: eklendi {created}, güncellendi {updated}, atlandı {unchanged}.\n"
+                message = "Full GitHub replacement did not complete.\n"
                 if failed_path:
-                    message += f"Hata alınan dosya: {failed_path}\n"
+                    message += f"File being processed: {failed_path}\n"
                 message += str(exc)
                 if failed_path.startswith(".github/workflows/"):
-                    message += " .github/workflows dosyaları için Workflows: write izni gerekebilir."
+                    message += " Files under .github/workflows may require the Workflows: write permission."
+                message += "\nThe branch is only changed by the final commit/ref update; uploaded but unreferenced blobs may remain if a later step fails."
                 self._post_ui(lambda msg=message: self._github_set_status(msg, C_ERR))
-                log_error(f"GitHub folder sync failed at {failed_path}: {message}")
+                log_error(f"GitHub full mirror failed at {failed_path}: {message}")
             finally:
                 self._github_busy = False
 
@@ -2278,6 +2463,9 @@ class ArdaLauncher(ctk.CTk):
         self._github_token_session = ""
         try: self._github_token_var.set("")
         except Exception: pass
+        self._refresh_developer_nav()
+        self.nav_history = [page for page in self.nav_history if page != "developer"] or ["settings"]
+        self.nav_index = min(self.nav_index, len(self.nav_history) - 1)
         self._load_page("settings", record=False)
         messagebox.showinfo("Geliştirici Modu", "Geliştirici modundan çıkış yapıldı.")
 
@@ -2365,7 +2553,7 @@ class ArdaLauncher(ctk.CTk):
         def worker():
             try:
                 with requests.get(f"https://raw.githubusercontent.com/{GITHUB_REPO}/main/version.json",
-                                  timeout=10, headers={"User-Agent":"ArdaLauncher/12.2"}) as response:
+                                  timeout=10, headers={"User-Agent":"ArdaLauncher/12.4"}) as response:
                     response.raise_for_status()
                     payload = response.json()
                 latest = str(payload.get("version", "?")) if isinstance(payload, dict) else "?"
@@ -2594,8 +2782,9 @@ class ArdaLauncher(ctk.CTk):
                 self._dev_verified = True
                 self.lockout = {}; save_json(SECURITY_LOCKOUT_FILE, self.lockout)
                 win.destroy()
+                self._refresh_developer_nav()
                 messagebox.showinfo(self.t("dev_welcome"), self.t("dev_active"))
-                self.show_page("settings")
+                self.show_page("developer")
             else:
                 try: self.lockout["fails"] = max(0, int(self.lockout.get("fails", 0) or 0)) + 1
                 except (TypeError, ValueError): self.lockout["fails"] = 1

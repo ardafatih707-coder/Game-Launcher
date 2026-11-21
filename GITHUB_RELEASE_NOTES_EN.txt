@@ -1,0 +1,13 @@
+ARDA LAUNCHER V12.4 — GITHUB RELEASE PACKAGE
+
+Files in this folder:
+- ArdaLauncher.pyw: V12.4 launcher with a dedicated full-page Developer Mode console.
+- ArdaLauncherInstaller.bat: English Windows installer/updater.
+- version.json: release metadata and SHA-256 checksum for ArdaLauncher.pyw.
+
+For a GitHub full-repository mirror, select this folder in Developer Mode.
+The mirror operation previews remote-only files and requires confirmation before deleting them.
+Do not include local settings, tokens, or private data in your project folder.
+
+The installer downloads ArdaLauncher.pyw from the configured GitHub main branch after
+version.json is published. Upload the launcher and version.json to the repository first.

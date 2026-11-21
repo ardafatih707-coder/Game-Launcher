@@ -1,0 +1,21 @@
+{
+  "version": "12.4",
+  "launcher_file": "ArdaLauncher.pyw",
+  "installer_file": "ArdaLauncherInstaller.bat",
+  "launcher_url": "https://raw.githubusercontent.com/ardafatih707-coder/Game-Launcher/main/ArdaLauncher.pyw",
+  "sha256": "3ce4e5623fed3b3a5e0d361e5fde87331625d8161843f3bbeec6495156e345ea",
+  "min_python": "3.10",
+  "dependencies": [
+    "customtkinter",
+    "Pillow",
+    "requests",
+    "psutil"
+  ],
+  "changelog": [
+    "V12.4 moves Developer Mode from a small Settings tab into a dedicated full-width page.",
+    "A Developer Mode navigation entry appears only after successful developer authentication and is removed at logout.",
+    "The developer page provides a larger repository file browser and full-width GitHub token, branch, upload, and mirror controls.",
+    "The route is guarded: unauthenticated navigation to Developer Mode returns to Settings.",
+    "The English Windows installer continues to install Python and required packages, download the launcher, and verify SHA-256."
+  ]
+}
