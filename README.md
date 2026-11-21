@@ -1,67 +1,56 @@
 <div align="center">
   <h1>🚀 ArdaLauncher</h1>
   <p>
-    <strong>Python tabanlı, hızlı ve otomatik kurulum destekli modern oyun başlatıcı.</strong>
-  </p>
-
-  <p>
-    <a href="https://github.com">
-      <img src="https://shields.io" alt="Sürüm">
-    </a>
-    <a href="https://github.com">
-      <img src="https://shields.io" alt="İndirmeler">
-    </a>
-    <img src="https://shields.io" alt="Python">
-    <img src="https://shields.io" alt="Platform">
+    <strong>A fast, lightweight, and auto-installing game launcher built with Python.</strong>
   </p>
 </div>
 
 ---
 
-## 📖 Hakkında
+## 📖 About
 
-**ArdaLauncher**, oyunlarınızı tek bir merkezden kolayca yönetebilmeniz ve başlatabilmeniz için Python (`.pyw`) ile geliştirilmiş hafif ve kullanıcı dostu bir başlatıcıdır. Tek tıkla kurulum betiği ve sürüm takip sistemi sayesinde her zaman güncel kalmanızı sağlar.
+**ArdaLauncher** is a lightweight and user-friendly game launcher developed with Python (`.pyw`) to help you easily manage and launch your games from a single hub. With its one-click installer script and version tracking system, it ensures your setup stays clean and up to date.
 
-## ✨ Özellikler
+## ✨ Features
 
-* ⚡ **Tek Tıkla Otomatik Kurulum:** `ArdaLauncherInstaller.bat` ile gerekli bileşenleri zahmetsizce kurun.
-* 🔄 **Akıllı Sürüm Kontrolü:** `version.json` altyapısı üzerinden yeni güncellemeleri otomatik takip eder.
-* 🖥️ **Arka Plan Konsolsuz Çalışma:** `.pyw` uzantısı sayesinde komut istemi (CMD) penceresi açılmadan doğrudan arayüz ile başlar.
-* 🎮 **Hızlı ve Hafif:** Sistem kaynaklarını yormadan oyunlarınıza anında erişim sağlar.
+* ⚡ **One-Click Auto Installation:** Effortlessly set up required dependencies using `ArdaLauncherInstaller.bat`.
+* 🔄 **Smart Version Tracking:** Automatically monitors updates via the `version.json` configuration.
+* 🖥️ **Console-Free Execution:** Runs with the `.pyw` extension so the interface opens directly without a background command prompt window.
+* 🎮 **Fast & Lightweight:** Provides instant access to your games without draining system resources.
 
-## 📂 Dosya Yapısı
+## 📂 File Structure
 
-* `ArdaLauncher.pyw` – Başlatıcının ana arayüz ve çalışma dosyası.
-* `ArdaLauncherInstaller.bat` – Gerekli paketleri ve ortamı otomatik kuran Windows kurulum betiği.
-* `version.json` – Güncel sürüm bilgilerini tutan yapılandırma dosyası.
-* `GITHUB_RELEASE_NOTES_EN.txt` – Sürüm notları ve değişiklik geçmişi.
+* `ArdaLauncher.pyw` – Main launcher interface and executable script.
+* `ArdaLauncherInstaller.bat` – Windows batch script that automatically installs dependencies and sets up the environment.
+* `version.json` – Configuration file storing current version metadata.
+* `GITHUB_RELEASE_NOTES_EN.txt` – Release notes and changelog.
 
-## 📥 Kurulum ve Kullanım
+## 📥 Installation & Usage
 
-### 1. Hızlı Kurulum (Önerilen)
-1. Bu depoyu indirin veya klonlayın:
+### 1. Quick Setup (Recommended)
+1. Download or clone this repository:
    ```bash
    git clone https://github.com
    ```
-2. Klasör içerisindeki **`ArdaLauncherInstaller.bat`** dosyasına çift tıklayarak kurulumu başlatın.
-3. Kurulum tamamlandıktan sonra **`ArdaLauncher.pyw`** dosyasını çalıştırarak başlatıcıyı açın.
+2. Double-click **`ArdaLauncherInstaller.bat`** inside the folder to run the setup.
+3. Once completed, launch **`ArdaLauncher.pyw`** to start the application.
 
-### 2. Manuel Çalıştırma
-Bilgisayarınızda Python yüklüyse doğrudan terminal üzerinden başlatabilirsiniz:
+### 2. Manual Run
+If you already have Python installed, you can start it directly via terminal:
 ```bash
 cd Game-Launcher
 pythonw ArdaLauncher.pyw
 ```
 
-## 💻 Gereksinimler
+## 💻 Requirements
 
-* **İşletim Sistemi:** Windows 10 / 11
-* **Yazılım:** Python 3.8 veya üzeri *(Installer betiği eksik gereksinimleri tamamlar)*
+* **Operating System:** Windows 10 / 11
+* **Software:** Python 3.8 or higher *(The installer script handles missing dependencies)*
 
-## 📝 Sürüm Notları
+## 📝 Release Notes
 
-Son yapılan değişiklikler ve güncellemeler için depo içerisindeki [`GITHUB_RELEASE_NOTES_EN.txt`](GITHUB_RELEASE_NOTES_EN.txt) dosyasına veya [Releases](https://github.com) sayfasına göz atabilirsiniz.
+Check out [`GITHUB_RELEASE_NOTES_EN.txt`](GITHUB_RELEASE_NOTES_EN.txt) in this repository or visit the [Releases](https://github.com) page for the latest updates and changes.
 
-## 🤝 Katkıda Bulunma
+## 🤝 Contributing
 
-Hata bildirimleri ve yeni özellik önerileri için [Issues](https://github.com) sekmesinden bildirim oluşturabilir veya Pull Request gönderebilirsiniz.
+Feel free to open an [Issue](https://github.com) for bug reports and feature requests, or submit a Pull Request.
