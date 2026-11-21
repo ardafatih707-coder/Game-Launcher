@@ -1,0 +1,20 @@
+{
+  "version": "12.1",
+  "launcher_file": "ArdaLauncher.pyw",
+  "installer_file": "ArdaLauncherInstaller.bat",
+  "launcher_url": "https://raw.githubusercontent.com/ardafatih707-coder/Game-Launcher/main/ArdaLauncher.pyw",
+  "sha256": "da87b7f5285583bae346ef3571a262bfe814518cababf253b2aae67a06082a7f",
+  "min_python": "3.10",
+  "dependencies": [
+    "customtkinter",
+    "Pillow",
+    "requests",
+    "psutil"
+  ],
+  "changelog": [
+    "V9.1 eski launcher dosyasindan V12.1 surumune guncelleme.",
+    "Gelistirici modunda GitHub depo dosya yoneticisi ve dosya ekleme/guncelleme.",
+    "Gmail SMTP ve uygulama sifresi gerektirmeyen yerel parola kurtarma.",
+    "Indirme, guvenlik, hata yonetimi ve kurulum dogrulama duzeltmeleri."
+  ]
+}
