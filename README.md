@@ -1,63 +1,60 @@
-<div align="center">
-  <h1>🚀 ARDA LAUNCHER v12.4</h1>
-  <p>
-    <strong>A modern, lightweight, and multi-language game launcher built with Python & CustomTkinter.</strong>
-  </p>
-</div>
+# ⚡ ARDA LAUNCHER
+
+**ARDA LAUNCHER** is a modern Windows game launcher that brings together 105+ free and open-source games in a single interface, featuring Steam integration and direct GitHub download support.
 
 ---
 
-## 📖 About
+## 🛠️ Installation and Running
 
-**ARDA LAUNCHER v12.4** is a sleek Windows desktop game hub designed to discover, download, and manage **115+ free-to-play and open-source games** from a single interface. Featuring direct GitHub release downloads with resume support, Steam library integration, daily rewards, and a zero-setup one-click Windows installer, it delivers a complete launcher experience without heavy background bloat.
+### Option 1: Automatic Installation (If Python is NOT Installed - Recommended)
+If you do not have Python or the required libraries installed on your PC, you can set everything up automatically with one click:
+
+1. Download the **`ArdaLauncherInstaller.bat`** file from this repository.
+2. Double-click the downloaded **`ArdaLauncherInstaller.bat`** file to run it.
+3. The installer wizard will automatically:
+   * Install a compatible Python version on your system,
+   * Install all required Python dependencies (`customtkinter`, `Pillow`, `requests`, `psutil`),
+   * Download the latest launcher file, verify its SHA-256 checksum, and launch the application automatically.
+
+### Option 2: Direct Launch (If Python is Already Installed)
+If you already have **Python 3.10 or newer** installed on your PC:
+
+1. Download the **`ArdaLauncher.pyw`** file from this repository.
+2. If the required packages are not installed yet, run the following command once in Command Prompt (CMD):
+   ```bash
+   pip install customtkinter Pillow requests psutil
+   ```
+3. Double-click **`ArdaLauncher.pyw`** to start the launcher directly.
 
 ---
 
 ## ✨ Key Features
 
-* 🎮 **115+ Free Games Catalog:** Browse open-source GitHub releases, free-to-play Steam titles, and standalone web games in one place.
-* ⬇️ **Smart Download Manager:** Multi-threaded HTTPS downloads from GitHub Releases with pause, resume (`Range` requests), cancel, and real-time speed tracking.
-* 🔗 **Steam Integration:** Automatically detects your local Steam installation, checks installed games, and triggers one-click Steam installs (`steam://install/`).
-* 🌍 **12 Languages Supported:** Auto-detects system language with full UI support for English, Türkçe, Deutsch, Français, Español, Italiano, Português, Русский, 中文, 日本語, 한국어, and العربية.
-* 🎡 **Gamification & Cosmetic Shop:** Spin the Daily Wheel, complete daily tasks, earn 💎 credits, and unlock profile banners.
-* ⚡ **Built-in Utilities:** Includes a safe Game Booster, Windows startup toggle, desktop shortcut generator, JSON data backup/restore, and SHA-256 verified auto-updates.
-* 🛠️ **Developer Console:** Built-in authenticated developer workspace with Windows DPAPI token encryption for managing repository files and atomic branch syncing.
+* **Extensive Game Catalog:** 105+ free games across FPS, RPG, Strategy, MMO, Racing, Co-op, and Open Source genres.
+* **Multi-Source Support:**
+  * **GitHub Integration:** Downloads and manages the latest releases of open-source games directly from GitHub (with pause, resume, and partial download recovery support).
+  * **Steam Synchronization:** Automatically detects installed Steam games and triggers installations directly through Steam.
+* **Gamification & Profile Customization:**
+  * **Daily Spin & Tasks:** Earn credits by completing daily login, download, and library milestones.
+  * **Cosmetic Shop & Profile:** Spend your credits on cosmetic items; customize your username, tag, avatar, and banner theme.
+* **Advanced Storage & Data Management:**
+  * Safely migrate your game data, cover art, and settings to another drive or folder with full integrity verification.
+  * One-click JSON backup, cache clearing, and desktop shortcut creation.
+* **Performance & System Utilities:**
+  * **Game Booster:** Safely terminates unnecessary background processes to improve gaming performance.
+  * **Multi-Language Support:** Supports 12 languages including English and Turkish (automatically detects your system language).
+  * **Theme Options:** Dark, Light, and System themes with adjustable game card sizes.
 
 ---
 
-## 📥 Quick Installation (All-in-One)
+## ⌨️ Shortcuts
 
-You don't need to install Python or any dependencies manually. The installer script handles everything automatically:
-
-1. Download **`ArdaLauncherInstaller.bat`** from this repository.
-2. Double-click **`ArdaLauncherInstaller.bat`**.
-3. The installer will automatically:
-   * Check for **Python 3.10+** and install **Python 3.13** silently if it is missing.
-   * Install all required packages (`customtkinter`, `Pillow`, `requests`, `psutil`).
-   * Download the latest `ArdaLauncher.pyw` into `%LOCALAPPDATA%\ArdaLauncher` and verify its **SHA-256** checksum.
-   * Launch **ARDA LAUNCHER** automatically when finished.
-
-> 💡 **Tip:** You can also run `ArdaLauncherInstaller.bat` anytime to update your existing installation to the latest version.
+| Shortcut | Action |
+| :--- | :--- |
+| `Ctrl + K` | Focus the game search bar |
 
 ---
 
-## 📂 Repository Structure
+## 🤝 Feedback & Bug Reports
 
-* `ArdaLauncherInstaller.bat` – All-in-one automatic Windows installer and updater.
-* `ArdaLauncher.pyw` – Main console-free GUI application.
-* `version.json` – Release metadata and SHA-256 verification hash.
-* `GITHUB_RELEASE_NOTES_EN.txt` – Version changelog and release details.
-
----
-
-## 💻 System Requirements
-
-* **OS:** Windows 10 / Windows 11 (64-bit)
-* **Internet Connection:** Required for automatic setup, game downloads, and updates
-
----
-
-## 📝 Release Notes & Feedback
-
-* Check [`GITHUB_RELEASE_NOTES_EN.txt`](GITHUB_RELEASE_NOTES_EN.txt) for full version history.
-* Found a bug or have a suggestion? Open an [Issue](https://github.com) or use the in-app **Report / Suggest** button.
+You can share your suggestions or report issues using the **"Report / Suggest"** button inside the app or via [this form](https://google.com).
